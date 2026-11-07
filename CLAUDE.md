@@ -23,9 +23,28 @@ Vollständige Anforderungen: Entwicklungs-Prompt von Christian (7.11.2026), Kapi
 packages/shared   Spielkern – reine TypeScript-Logik, KEINE Phaser-/DOM-Abhängigkeit
 packages/client   Browser: Phaser 4 (Darstellung), eigene DOM-Eingabe, HTML-Oberfläche
 packages/server   (ab Etappe 3) Colyseus-Server, führt den Spielkern autoritativ aus
-data/             Inhalte: units/, maps/ (Tiled-JSON), i18n/
+data/             Inhalte: rules/ (Waffen, Gebäude, Fraktionen, KI), units/, maps/ (Tiled-JSON), i18n/
 scripts/          Werkzeuge (z.B. Kartengenerator)
 ```
+
+### Spielkern-Module (`packages/shared/src`)
+| Datei | Aufgabe |
+| --- | --- |
+| `data/rules.ts` | Lädt + prüft alle Regel-Dateien (Zod), rechnet in Ticks/Welteinheiten um, Fraktions-Modifikatoren |
+| `sim/simulation.ts` | Zustand (Spieler, Einheiten, Gebäude, Geschosse), Befehle, Tick-Reihenfolge, Sieg/Niederlage |
+| `sim/movement.ts` | A*/Flussfeld-Bewegung, Gedränge, Festfahr-Erkennung |
+| `sim/production.ts` | Bauschlangen, Platzieren (`canPlace`), Strom, Lager, Reparatur, Verkaufen |
+| `sim/economy.ts` | Kristallfelder (nachwachsend), Sammler-Zustandsmaschine |
+| `sim/combat.ts` | Zielwahl (nur Sichtbares), Schiessen, Geschosse, Flächenschaden, Panzerungsklassen |
+| `sim/tasks.ts` | Einheiten-Aufgaben: Angriff, Angriffsbewegung, Verfolgen (Haltungen), Ingenieur, Bauwagen |
+| `sim/fog.ts` | Sicht je Spieler (Verbündete teilen), Erkundet, «Geister» gesehener Gebäude |
+| `sim/setup.ts` | Gefechts-Start: Bauwagen + Eskorte je Startplatz, KI-Spieler anhängen |
+| `ai/skirmishAi.ts` | KI: nur über `sim.issue()`, sieht nur durch eigene Augen; Stufen in `data/rules/ai.json` |
+
+Tick-Reihenfolge: Befehle → Produktion → Reparatur → Wirtschaft → Aufgaben → Kampf → Geschosse →
+Bewegung → Strom → Nebel (alle 3 Ticks) → Sieg (alle 15 Ticks) → KI. Tote Objekte werden mit `dead`
+markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt der Client mit `drainEvents()`.
+`victory: 'none'` schaltet die automatische Niederlage aus (Tests, spätere Kampagnenmissionen).
 
 ### Spielkern (`@fftr/shared`)
 - **Deterministisch:** nur Ganzzahl-Arithmetik. Positionen in Welteinheiten, `TILE = 1024` Einheiten pro Kachel
@@ -43,13 +62,22 @@ scripts/          Werkzeuge (z.B. Kartengenerator)
 - `stateHash()` liefert eine Prüfsumme – für Synchronitätstests und später den Mehrspieler.
 
 ### Client (`@fftr/client`)
-- `GameScene` verbindet Simulation, Darstellung und Eingabe; interpoliert zwischen Ticks (`prevX/prevY`).
+- `main.ts` → `ui/Menu.ts` (Hauptmenü, Gefecht-Einrichtung, Einstellungen, Credits) → startet `GameScene`.
+- `GameScene` verbindet Simulation, Darstellung, Eingabe und Oberfläche; interpoliert zwischen Ticks
+  (`prevX/prevY`), zeigt Gegner nur im Sichtbereich, Gebäude-«Geister» im Nebel, Comic-Effekte aus Ereignissen.
+- Kontextbefehl (Rechtsklick/Tippen) je nach Ziel: Angriff, Ernten, Andocken, Ingenieur, sonst Fahren.
+  Angriffsbewegung: A bzw. Knopf, dann Linksklick/Tippen. Platzieren: Maus folgt; Touch tippen + ✓.
 - Eingabe über **DOM-Pointer-Events** (`input/InputController.ts`), nicht Phaser-Input. Maus und Touch getrennt.
-- Oberfläche (Seitenleiste, Befehlsleiste) als **HTML/CSS** (`ui/Hud.ts`, `style.css`), Smartphone-Layout per
-  Media-Query `(max-width: 900px), (max-height: 520px)`.
-- Grafiken sind **Platzhalter**, zur Laufzeit auf Canvas gezeichnet (`game/textures.ts`). Texture-Keys bleiben
-  beim späteren Austausch gegen Sprites gleich.
-- Dev-Hilfen: `?units=200` (Anzahl Starteinheiten), `?debug` (Wege anzeigen), `window.fftr` (nur `npm run dev`).
+- Oberfläche als **HTML/CSS** (`ui/Hud.ts`, `style.css`): Glimmerit, Strom, Minikarte (nur mit Radar + Strom),
+  Bauleiste mit Reitern, Befehlsleiste, Meldungen + Sprechblase, Pause, Endbildschirm.
+  Smartphone-Layout per Media-Query `(max-width: 900px), (max-height: 520px)`.
+- Grafiken sind **Platzhalter**, zur Laufzeit auf Canvas gezeichnet: `game/terrainPainter.ts` (Gelände mit
+  runden Rändern, freistehende Bäume), `game/textures.ts` (Einheiten/Gebäude je Fraktion + Spielerfarbe,
+  Effekte, Bauleisten-Symbole). Texture-Keys bleiben beim späteren Austausch gegen Sprites gleich.
+- Einstellungen in IndexedDB (`storage.ts`), Sprache in localStorage (synchron beim Start nötig).
+- Dev-Hilfen: `?play` (Gefecht sofort starten), `?debug` (Wege anzeigen), `window.fftr` (nur `npm run dev`).
+- Achtung Browser-Vorschau: Ist das Fenster ausgeblendet, zeichnet der Browser kaum neu – Screenshots sind
+  dann veraltet. Zustand lieber per `window.fftr` prüfen.
 
 ### Karten
 - Format: Tiled-JSON, Ebene `terrain` (Tileset-Kacheln mit Eigenschaft `terrain`), Objektebene mit
@@ -74,15 +102,22 @@ npm run maps         # Startkarten neu erzeugen
 - TypeScript strict. Bezeichner Englisch, **Kommentare, Commits und Doku Deutsch**.
 - Spiellogik nur in `shared`, mit Tests in `packages/shared/test`. Neue Mechanik → neuer Test.
 - Kleine, sinnvoll benannte Commits (z.B. `Wegfindung: Flussfelder für Gruppen`).
-- Tastenbelegung: Pfeiltasten = Kamera; WASD = Kamera nur ohne Auswahl (mit Auswahl: S = Stopp, A = Angriff).
+- Tastenbelegung: Pfeiltasten = Kamera; WASD = Kamera nur ohne Auswahl (mit Auswahl: S = Stopp,
+  A = Angriffsbewegung, D = Bauwagen ausfahren). Esc: abbrechen, sonst Pause.
+- Kinderschutz in der Bedienung: Verkaufen braucht zweimaliges Tippen, Aufgeben eine Bestätigung.
 - Deployment: Push auf `main` → GitHub Actions testet, baut und veröffentlicht auf GitHub Pages.
 
 ## Stand
 
-- **Etappe 1 – Fundament:** umgesetzt, wartet auf Abnahme durch Christian.
-  Monorepo, Tests, Pages-Deployment, Karte Kristalltal, Kamera (Maus/Tastatur/Touch), Auswahl und Bewegung
-  mit A* + Flussfeldern. 200 Einheiten laufen lokal mit 60 fps (Tick ≈ 2–3 ms).
-- **Nächstes (Etappe 2):** Wirtschaft (Sammler, Raffinerie), Basisbau mit Bauleiste, Strom, Kampf, Nebel,
-  gemeinsame Einheiten beider Fraktionen, KI Leicht, Sieg/Niederlage, Hauptmenü.
+- **Etappe 1 – Fundament:** abgenommen (7.11.2026). Grafik wurde als «sehr rudimentär» empfunden →
+  in Etappe 2 bessere Platzhalter (runde Geländeränder, Fraktions-Look) gezeichnet.
+- **Etappe 2 – Spielbares Gefecht:** umgesetzt, wartet auf Abnahme. Wirtschaft (Sammler, Raffinerie, Silo,
+  Nachwachsen, Lager voll), Basisbau (Bauleiste, Platzieren grün/rot, Pause/Abbruch, Verkaufen, Reparieren),
+  Strom (Mangel bremst Bau/Türme, schaltet Radar ab), Kampf (Waffen × Panzerung, Haltungen, Angriffsbewegung,
+  Türme, Flächenschaden), Nebel mit Geistern, gemeinsame Bodeneinheiten beider Fraktionen (Aero billiger und
+  schneller, Granit zäher), Ingenieur, Bauwagen, KI Leicht, Sieg/Niederlage/Aufgeben, Hauptmenü,
+  Endstatistik. Getestet: komplette Partie gegen KI im Browser gewonnen; KI besiegt untätigen Gegner (Test).
+- **Bewusst später:** Luft/See und Flugfeld/Werft/Technikzentrum/Flak-Stellung/Reparaturstation (Etappe 4),
+  KI Mittel/Schwer (Etappe 4, Werte stehen schon in ai.json), Bonus-Punkte (Etappe 4), Sound (Etappe 6).
 - Offene Punkte: Strg+Zahl wird von manchen Browsern abgefangen (Ausweichweg: Gruppenknopf lange drücken).
-  Gelände hat noch keine weichen Übergänge (Autotiling) – kommt mit den echten Grafiken.
+  KI gegen KI (Leicht) endet oft unentschieden – für Etappe 4/5 Balancing.
