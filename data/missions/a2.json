@@ -1,0 +1,86 @@
+{
+  "id": "a2",
+  "faction": "aero",
+  "order": 2,
+  "map": "nebelwald",
+  "titleKey": "mission.a2.title",
+  "briefingKey": "mission.a2.briefing",
+  "briefingGoals": ["mission.a2.goal.rescue", "mission.a2.goal.escort", "mission.a2.goal.survive"],
+  "players": [
+    { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
+    { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" }
+  ],
+  "credits": 0,
+  "areas": {
+    "landing": [2, 35, 10, 10],
+    "pickup": [3, 3, 8, 8],
+    "prison": [56, 19, 9, 9],
+    "camp": [54, 16, 13, 14],
+    "campGate": [46, 20, 5, 5],
+    "bridgeSouth": [31, 36, 10, 8],
+    "bridgeNorth": [34, 5, 9, 8],
+    "clearing": [17, 21, 6, 6],
+    "northEast": [62, 2, 7, 6]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "spawn", "owner": 1, "unit": "jetpackRanger", "count": 6, "at": "landing" },
+        { "type": "spawn", "owner": 1, "unit": "hoverTank", "count": 2, "at": "landing" },
+        { "type": "spawn", "owner": 2, "unit": "researcher", "at": "prison", "tag": "researcher", "stance": "passive" },
+        { "type": "base", "owner": 2, "at": [61, 21], "buildings": ["powerPlant", "barracks", "mgTower"], "tag": "camp" },
+        { "type": "building", "owner": 2, "building": "cannonTower", "at": [55, 24], "tag": "camp", "difficulty": ["hard"] },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 3, "hard": 3 }, "at": "camp" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 1, "medium": 1, "hard": 2 }, "at": "campGate" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 3, "hard": 3 }, "at": "bridgeSouth", "stance": "hold" },
+        { "type": "building", "owner": 2, "building": "mgTower", "at": [33, 38], "difficulty": ["hard"] },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": 2, "at": "bridgeNorth", "stance": "hold" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 0, "medium": 1, "hard": 2 }, "at": "bridgeNorth", "stance": "hold" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": 1, "at": "clearing", "difficulty": ["hard"] },
+        { "type": "message", "key": "mission.a2.m.start" },
+        { "type": "objective", "id": "rescue", "key": "mission.a2.o.rescue" },
+        { "type": "objective", "id": "survive", "key": "mission.a2.o.survive" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 20 }],
+      "do": [{ "type": "message", "key": "mission.a2.m.forest" }]
+    },
+    {
+      "when": [{ "type": "enterArea", "area": "prison", "owner": 1 }],
+      "do": [
+        { "type": "transfer", "tag": "researcher", "owner": 1 },
+        { "type": "complete", "id": "rescue" },
+        { "type": "message", "key": "mission.a2.m.freed", "speaker": "researcher" },
+        { "type": "message", "key": "mission.a2.m.toPickup" },
+        { "type": "reveal", "area": "pickup" },
+        { "type": "objective", "id": "escort", "key": "mission.a2.o.escort" },
+        { "type": "flag", "name": "freed" }
+      ]
+    },
+    {
+      "difficulty": ["medium", "hard"],
+      "when": [{ "type": "flag", "name": "freed" }],
+      "delay": { "easy": 30, "medium": 25, "hard": 15 },
+      "do": [
+        { "type": "message", "key": "mission.a2.m.alarm", "speaker": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 0, "medium": 2, "hard": 3 }, "at": "northEast", "attackTo": "pickup" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": 1, "at": "northEast", "attackTo": "pickup", "difficulty": ["hard"] }
+      ]
+    },
+    {
+      "when": [{ "type": "enterArea", "area": "pickup", "tag": "researcher" }, { "type": "flag", "name": "freed" }],
+      "do": [
+        { "type": "complete", "id": "escort" },
+        { "type": "complete", "id": "survive" },
+        { "type": "message", "key": "mission.a2.m.won" },
+        { "type": "victory" }
+      ]
+    },
+    {
+      "when": [{ "type": "army", "owner": 1, "atMost": 0 }],
+      "do": [{ "type": "fail", "id": "survive" }, { "type": "defeat", "key": "mission.lost.squad" }]
+    }
+  ]
+}

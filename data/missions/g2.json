@@ -1,0 +1,61 @@
+{
+  "id": "g2",
+  "faction": "granite",
+  "order": 2,
+  "map": "archipel",
+  "titleKey": "mission.g2.title",
+  "briefingKey": "mission.g2.briefing",
+  "briefingGoals": ["mission.g2.goal.base", "mission.g2.goal.cross", "mission.g2.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" }
+  ],
+  "credits": { "easy": 7000, "medium": 5500, "hard": 4500 },
+  "areas": {
+    "home": [9, 9, 13, 13],
+    "enemy": [72, 72, 16, 16],
+    "middle": [42, 42, 12, 12]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [15, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory"] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 3, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 1, "at": "home" },
+        {
+          "type": "base",
+          "owner": 2,
+          "at": [80, 80],
+          "buildings": ["constructionYard", "powerPlant", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "airfield", "techCenter", "shipyard", "flakPosition", "flakPosition", "mgTower", "mgTower", "cannonTower"],
+          "tag": "enemyBase"
+        },
+        { "type": "base", "owner": 2, "at": [80, 80], "buildings": ["rocketBattery", "cannonTower"], "difficulty": ["medium", "hard"] },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 2, "medium": 3, "hard": 4 }, "at": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": 4, "at": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "enemy" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 2000, "medium": 4000, "hard": 7000 } },
+        { "type": "ai", "owner": 2 },
+        { "type": "message", "key": "mission.g2.m.start" },
+        { "type": "objective", "id": "destroy", "key": "mission.g2.o.destroy" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 30 }],
+      "do": [{ "type": "message", "key": "mission.g2.m.tip" }]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 240 }],
+      "do": [{ "type": "message", "key": "mission.g2.m.middle" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "destroy" }, { "type": "message", "key": "mission.g2.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

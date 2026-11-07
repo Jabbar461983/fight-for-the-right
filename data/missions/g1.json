@@ -1,0 +1,106 @@
+{
+  "id": "g1",
+  "faction": "granite",
+  "order": 1,
+  "map": "vier-winde",
+  "titleKey": "mission.g1.title",
+  "briefingKey": "mission.g1.briefing",
+  "briefingGoals": ["mission.g1.goal.hold", "mission.g1.goal.hq"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" }
+  ],
+  "credits": { "easy": 5000, "medium": 3500, "hard": 2500 },
+  "locked": ["shipyard"],
+  "areas": {
+    "base": [7, 7, 12, 12],
+    "east": [63, 9, 7, 7],
+    "south": [9, 63, 7, 7],
+    "southEast": [63, 63, 7, 7]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "building", "owner": 1, "building": "constructionYard", "at": [12, 12], "tag": "hq" },
+        { "type": "base", "owner": 1, "at": [12, 12], "buildings": ["powerPlant", "powerPlant", "refinery", "barracks", "factory"] },
+        { "type": "building", "owner": 1, "building": "cannonTower", "at": [21, 17] },
+        { "type": "building", "owner": 1, "building": "mgTower", "at": [17, 21] },
+        { "type": "building", "owner": 1, "building": "mgTower", "at": [23, 11], "difficulty": ["easy", "medium"] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 3, "at": "base" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": 4, "at": "base" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 2, "at": "base" },
+        { "type": "message", "key": "mission.g1.m.start" },
+        { "type": "objective", "id": "hold", "key": "mission.g1.o.hold" },
+        { "type": "objective", "id": "hq", "key": "mission.g1.o.hq" },
+        { "type": "countdown", "seconds": 900, "key": "mission.g1.countdown" }
+      ]
+    },
+    {
+      "when": [{ "type": "every", "seconds": 90, "from": 75, "until": 840 }],
+      "do": [
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 3, "hard": 4 }, "growth": { "easy": 0.3, "medium": 0.4, "hard": 0.5 }, "at": "east", "attackTo": "base" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 1, "medium": 1, "hard": 2 }, "growth": { "easy": 0.15, "medium": 0.3, "hard": 0.4 }, "at": "east", "attackTo": "base" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 0, "medium": 1, "hard": 1 }, "growth": { "easy": 0, "medium": 0.2, "hard": 0.3 }, "at": "east", "attackTo": "base" }
+      ]
+    },
+    {
+      "when": [{ "type": "every", "seconds": 90, "from": 120, "until": 840 }],
+      "do": [
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 2, "hard": 3 }, "growth": { "easy": 0.2, "medium": 0.4, "hard": 0.5 }, "at": "south", "attackTo": "base" },
+        { "type": "spawn", "owner": 2, "unit": "hoverTank", "count": { "easy": 0, "medium": 1, "hard": 1 }, "growth": { "easy": 0.15, "medium": 0.2, "hard": 0.35 }, "at": "south", "attackTo": "base" }
+      ]
+    },
+    {
+      "difficulty": ["medium", "hard"],
+      "when": [{ "type": "every", "seconds": 120, "from": 300, "until": 840 }],
+      "do": [
+        { "type": "spawn", "owner": 2, "unit": "jetpackRanger", "count": { "easy": 0, "medium": 2, "hard": 3 }, "growth": 0.5, "at": "southEast", "attackTo": "base" },
+        { "type": "spawn", "owner": 2, "unit": "artillery", "count": 1, "growth": 0.3, "at": "southEast", "attackTo": "base", "difficulty": ["hard"] }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 40 }],
+      "do": [{ "type": "message", "key": "mission.g1.m.tip" }]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 400 }],
+      "do": [
+        { "type": "message", "key": "mission.g1.m.air" },
+        { "type": "spawn", "owner": 2, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "southEast", "attackTo": "base" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 640 }],
+      "do": [
+        { "type": "spawn", "owner": 2, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 4 }, "at": "east", "attackTo": "base" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 450 }],
+      "do": [{ "type": "message", "key": "mission.g1.m.half" }]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 780 }],
+      "do": [
+        { "type": "message", "key": "mission.g1.m.final" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 3, "medium": 5, "hard": 7 }, "at": "east", "attackTo": "base" },
+        { "type": "spawn", "owner": 2, "unit": "hoverTank", "count": { "easy": 2, "medium": 3, "hard": 5 }, "at": "south", "attackTo": "base" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 2, "medium": 4, "hard": 6 }, "at": "southEast", "attackTo": "base" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 900 }],
+      "do": [
+        { "type": "complete", "id": "hold" },
+        { "type": "complete", "id": "hq" },
+        { "type": "message", "key": "mission.g1.m.won" },
+        { "type": "victory" }
+      ]
+    },
+    {
+      "when": [{ "type": "destroyed", "tag": "hq" }],
+      "do": [{ "type": "fail", "id": "hq" }, { "type": "defeat", "key": "mission.lost.hq" }]
+    }
+  ]
+}
