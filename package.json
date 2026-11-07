@@ -1,0 +1,23 @@
+{
+  "name": "fight-for-the-right",
+  "private": true,
+  "type": "module",
+  "description": "Fight for the Right – 2D-Echtzeit-Strategiespiel im Browser",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @fftr/client",
+    "build": "npm run build -w @fftr/client",
+    "preview": "npm run preview -w @fftr/client",
+    "test": "npm run test -w @fftr/shared",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "maps": "node scripts/generate-maps.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

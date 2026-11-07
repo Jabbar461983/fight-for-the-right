@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Der Spielkern darf weder DOM noch Node-APIs benutzen – er läuft im Browser UND auf dem Server.
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src"]
+}
