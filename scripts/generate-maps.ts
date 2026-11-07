@@ -60,10 +60,10 @@ class MapBuilder {
 
   readonly w: number;
   readonly h: number;
-  /** 2 = punktsymmetrisch (180°), 4 = vierfach drehsymmetrisch (90°, nur quadratische Karten). */
-  readonly sym: 2 | 4;
+  /** 1 = ohne Symmetrie (Missionskarten), 2 = punktsymmetrisch (180°), 4 = vierfach drehsymmetrisch (90°, nur quadratisch). */
+  readonly sym: 1 | 2 | 4;
 
-  constructor(w: number, h: number, sym: 2 | 4 = 2) {
+  constructor(w: number, h: number, sym: 1 | 2 | 4 = 2) {
     this.w = w;
     this.h = h;
     this.sym = sym;
@@ -75,6 +75,7 @@ class MapBuilder {
   images(x: number, y: number): [number, number][] {
     const W = this.w - 1;
     const H = this.h - 1;
+    if (this.sym === 1) return [[x, y]];
     if (this.sym === 2) return [[x, y], [W - x, H - y]];
     return [[x, y], [W - y, x], [W - x, H - y], [y, H - x]];
   }
@@ -143,7 +144,7 @@ class MapBuilder {
     const W = this.w;
     const H = this.h;
     const pts: [number, number][] =
-      this.sym === 2 ? [[x, y], [W - x, H - y]] : [[x, y], [W - y, x], [W - x, H - y], [y, H - x]];
+      this.sym === 1 ? [[x, y]] : this.sym === 2 ? [[x, y], [W - x, H - y]] : [[x, y], [W - y, x], [W - x, H - y], [y, H - x]];
     // Objekt genau in der Mitte: nur einmal
     const unique = pts.filter((p, i) => pts.findIndex((q) => q[0] === p[0] && q[1] === p[1]) === i);
     (copies ? unique : unique.slice(0, 1)).forEach(([px, py], i) => {
@@ -408,6 +409,46 @@ function archipel() {
   return m.toTiled({ nameKey: 'map.archipel.name', maxPlayers: 4 });
 }
 
+// ───────────── Missionskarte «Nebelwald» (A2: Rettung, ohne Basis) ─────────────
+// Landeplatz unten links, Gefangenenlager rechts, Abholpunkt oben links.
+// Dichter Wald: Düsenrucksack-Späher fliegen drüber, Schwebepanzer nehmen Strassen und Fluss.
+
+function nebelwald() {
+  const m = new MapBuilder(72, 48, 1);
+  const forest = valueNoise(83, 4, 72);
+  const sand = valueNoise(89, 6, 72);
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      if (forest(x, y) > 0.45) m.set(x, y, T.forest);
+      else if (sand(x, y) > 0.7) m.set(x, y, T.sand);
+    }
+  }
+  // Fluss von oben nach unten
+  for (let y = 0; y < m.h; y++) {
+    const cx = 36 + Math.sin(y / 6) * 2;
+    for (let x = Math.floor(cx - 2); x <= Math.ceil(cx + 2); x++) if (Math.abs(x - cx) <= 1.8) m.set(x, y, T.water);
+  }
+  // Lichtungen
+  m.disc(7, 40, 5, T.grass); // Landeplatz
+  m.disc(7, 7, 4.5, T.grass); // Abholpunkt
+  m.disc(60, 23, 7.5, T.sand); // Lager
+  m.disc(20, 24, 3, T.grass);
+  m.disc(50, 40, 3.5, T.grass);
+  // Klippen ums Lager, zwei Eingänge (West über die Strasse, Süd)
+  m.polyline([[53, 15], [60, 14], [67, 16], [68, 23], [67, 30]], 1, () => T.cliff);
+  m.polyline([[53, 15], [52, 19]], 1, () => T.cliff);
+  m.polyline([[52, 27], [53, 31], [57, 31]], 1, () => T.cliff);
+  // Strassen (Wasser → Brücke)
+  const road = (old: number) => (old === T.water || old === T.bridge ? T.bridge : T.road);
+  m.polyline([[7, 40], [20, 40], [36, 40], [50, 40], [60, 34], [60, 23]], 2, road);
+  m.polyline([[60, 23], [46, 22], [40, 9], [20, 8], [7, 7]], 2, road);
+  m.polyline([[20, 40], [20, 24], [20, 8]], 1, road);
+
+  m.object('spawn', 'spawn', 7.5, 40.5, () => ({ player: 1 }));
+  m.object('spawn', 'spawn', 60.5, 23.5, () => ({ player: 2 }));
+  return m.toTiled({ nameKey: 'map.nebelwald.name', maxPlayers: 2 });
+}
+
 // ───────────── Tileset-Bild (einfarbig, nur für den Editor) ─────────────
 
 function crc32(buf: Uint8Array): number {
@@ -469,6 +510,7 @@ writeFileSync(join(OUT_DIR, 'kristalltal.json'), JSON.stringify(kristalltal()) +
 writeFileSync(join(OUT_DIR, 'vier-winde.json'), JSON.stringify(vierWinde()) + '\n');
 writeFileSync(join(OUT_DIR, 'zwei-ufer.json'), JSON.stringify(zweiUfer()) + '\n');
 writeFileSync(join(OUT_DIR, 'archipel.json'), JSON.stringify(archipel()) + '\n');
+writeFileSync(join(OUT_DIR, 'nebelwald.json'), JSON.stringify(nebelwald()) + '\n');
 writeFileSync(
   join(OUT_DIR, 'terrain-tiles.png'),
   png(TILE_PX * TERRAINS.length, TILE_PX, (x, y) => {
