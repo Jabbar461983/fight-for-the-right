@@ -1,0 +1,58 @@
+{
+  "units": [
+    {
+      "id": "rifleman",
+      "nameKey": "unit.rifleman",
+      "faction": "common",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "speed": 1.6,
+      "radius": 0.22,
+      "sight": 5,
+      "hp": 100,
+      "cost": 100,
+      "sprite": "rifleman"
+    },
+    {
+      "id": "rocketeer",
+      "nameKey": "unit.rocketeer",
+      "faction": "common",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "speed": 1.4,
+      "radius": 0.22,
+      "sight": 5,
+      "hp": 100,
+      "cost": 300,
+      "sprite": "rocketeer"
+    },
+    {
+      "id": "lightTank",
+      "nameKey": "unit.lightTank",
+      "faction": "common",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "speed": 2.6,
+      "radius": 0.42,
+      "sight": 6,
+      "hp": 300,
+      "cost": 700,
+      "sprite": "lightTank",
+      "turret": true
+    },
+    {
+      "id": "artillery",
+      "nameKey": "unit.artillery",
+      "faction": "common",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "speed": 1.8,
+      "radius": 0.42,
+      "sight": 5,
+      "hp": 200,
+      "cost": 900,
+      "sprite": "artillery",
+      "turret": true
+    }
+  ]
+}
