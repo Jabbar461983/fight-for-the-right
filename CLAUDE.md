@@ -142,7 +142,16 @@ npm run maps         # Startkarten neu erzeugen
   Türme, Flächenschaden), Nebel mit Geistern, gemeinsame Bodeneinheiten beider Fraktionen (Aero billiger und
   schneller, Granit zäher), Ingenieur, Bauwagen, KI Leicht, Sieg/Niederlage/Aufgeben, Hauptmenü,
   Endstatistik. Getestet: komplette Partie gegen KI im Browser gewonnen; KI besiegt untätigen Gegner (Test).
-- **Bewusst später:** Luft/See und Flugfeld/Werft/Technikzentrum/Flak-Stellung/Reparaturstation (Etappe 4),
-  KI Mittel/Schwer (Etappe 4, Werte stehen schon in ai.json), Bonus-Punkte (Etappe 4), Sound (Etappe 6).
+- **Etappe 4 – Inhalte:** fertig, wartet auf Abnahme. Luft (Kampf-/Transporthubschrauber, Jets mit Munition →
+  Flugfeld nachladen, Luftschiffe), See (Patrouillen-/Landungsboot, Werft nur am Wasser), Spezialeinheiten je
+  Fraktion (Aero: Düsenrucksack, Schwebepanzer, Komet-Jäger, Radar-Zeppelin, Raketenboot; Granit: Schildträger,
+  Koloss, Maulwurf (gräbt sich ein, bringt 4 Schützen mit), Bomben-Luftschiff, Dampfkreuzer), Spezialabwehr
+  (Raketenbatterie Aero, Bunker Granit mit 3 Plätzen), Flak, Reparaturstation, Technikzentrum,
+  Bonus-Punkte (neutrale Glimmerit-Quellen, Ingenieur übernimmt), Karten Zwei Ufer + Archipel, KI Mittel/Schwer.
+  Ein-/Aussteigen: Einheiten wählen → Rechtsklick/Tippen auf eigenen Transporter/Bunker; Knopf «Aussteigen».
+  `airborne` = fliegt wirklich (nur Flak/Raketen treffen); Jetpack ist `moveClass air`, aber nicht airborne.
+  Darstellung: Flieger mit Höhe (`UnitView.alt`) + Schatten, Rotor dreht sich, Maulwurf als Erdhügel.
+  KI-Stand: Schwer vs Leicht ≈ 3 Siege / 4 Unentschieden / 1 Niederlage (8 Testpartien) – Balancing Etappe 6.
+- **Bewusst später:** Sound (Etappe 6), Kampagne (Etappe 5).
 - Offene Punkte: Strg+Zahl wird von manchen Browsern abgefangen (Ausweichweg: Gruppenknopf lange drücken).
   KI gegen KI (Leicht) endet oft unentschieden – für Etappe 4/5 Balancing.
