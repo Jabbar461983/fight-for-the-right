@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1b1d2e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Fight for the Right</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 26 12 16 30 6 12Z' fill='%235ff0ff' stroke='%231d1a2b' stroke-width='2'/%3E%3Cpath d='M16 2 16 30M6 12h20' stroke='%231d1a2b' stroke-width='1.5'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <main id="stage">
+        <div id="game"></div>
+        <div id="dragbox" hidden></div>
+        <nav id="commandbar"></nav>
+      </main>
+      <aside id="sidebar"></aside>
+      <div id="rotate-hint">
+        <svg viewBox="0 0 64 64" width="72" height="72" aria-hidden="true">
+          <rect x="20" y="8" width="24" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="3" />
+          <path d="M10 44a24 24 0 0 0 30 12" fill="none" stroke="currentColor" stroke-width="3" />
+          <path d="M36 52l5 4-5 4" fill="none" stroke="currentColor" stroke-width="3" />
+        </svg>
+        <p data-i18n="ui.rotate"></p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

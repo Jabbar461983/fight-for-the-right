@@ -1,0 +1,377 @@
+/* ───────────── Grundlayout ───────────── */
+:root {
+  --bg: #1b1d2e;
+  --panel: #262a42;
+  --panel-2: #30355a;
+  --text: #f2efe4;
+  --muted: #b7b4c8;
+  --accent: #5ff0ff;
+  --accent-2: #ffcf4a;
+  --outline: #11121d;
+  --sidebar-w: 260px;
+  --btn: 52px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--bg);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
+#stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+#game canvas {
+  display: block;
+}
+
+#dragbox {
+  position: absolute;
+  border: 2px solid #9dff5c;
+  background: rgba(157, 255, 92, 0.12);
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ───────────── Befehlsleiste ───────────── */
+#commandbar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(17, 18, 29, 0.72);
+  border: 2px solid var(--outline);
+  border-radius: 14px;
+  backdrop-filter: blur(4px);
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+#commandbar.has-selection {
+  opacity: 1;
+}
+
+#commandbar button {
+  position: relative;
+  width: var(--btn);
+  height: var(--btn);
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--outline);
+  border-radius: 10px;
+  background: linear-gradient(#3b4170, #2a2e50);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.15);
+  font-weight: 800;
+  font-size: 20px;
+  touch-action: manipulation;
+}
+
+#commandbar button:active:not(:disabled) {
+  transform: translateY(1px);
+  background: linear-gradient(#4b5290, #343a66);
+}
+
+#commandbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#commandbar svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#commandbar [data-cmd='attack'] svg,
+#commandbar [data-cmd='stance'] svg {
+  fill: none;
+}
+
+#commandbar .badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background: var(--accent-2);
+  color: var(--outline);
+  font-size: 12px;
+  line-height: 20px;
+  border: 2px solid var(--outline);
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--btn) + 34px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--outline);
+  background: #fffbe8;
+  color: var(--outline);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ───────────── Seitenleiste ───────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-left: 3px solid var(--outline);
+  overflow: hidden;
+}
+
+.sb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: linear-gradient(#3a3f6e, #2a2e50);
+  border-bottom: 3px solid var(--outline);
+}
+
+.sb-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--accent-2);
+  text-shadow: 2px 2px 0 var(--outline);
+  text-transform: uppercase;
+}
+
+.sb-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--outline);
+  border-radius: 10px;
+  background: var(--panel-2);
+  place-items: center;
+}
+
+.sb-toggle svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+
+.sb-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel {
+  background: var(--panel-2);
+  border: 2px solid var(--outline);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.panel h2 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#selection-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 14px;
+}
+
+.help summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.help h3 {
+  margin: 10px 0 4px;
+  font-size: 13px;
+}
+
+.help li {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 2px 0;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.panel.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.lang {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.panel.row button {
+  min-height: 36px;
+  min-width: 44px;
+  padding: 0 10px;
+  border: 2px solid var(--outline);
+  border-radius: 8px;
+  background: var(--panel);
+  font-weight: 700;
+}
+
+.lang button.active {
+  background: var(--accent-2);
+  color: var(--outline);
+}
+
+#stats {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ───────────── Kleine Bildschirme: Seitenleiste unten, einklappbar ───────────── */
+@media (max-width: 900px), (max-height: 520px) {
+  :root {
+    --btn: 48px;
+  }
+
+  #sidebar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 75%;
+    border-left: none;
+    border-top: 3px solid var(--outline);
+    border-radius: 14px 14px 0 0;
+    z-index: 10;
+    transition: transform 0.25s ease;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #sidebar.collapsed {
+    transform: translateY(calc(100% - 52px - env(safe-area-inset-bottom)));
+  }
+
+  .sb-header {
+    padding: 4px 10px;
+    min-height: 52px;
+  }
+
+  .sb-header h1 {
+    font-size: 15px;
+  }
+
+  .sb-toggle {
+    display: grid;
+  }
+
+  #sidebar:not(.collapsed) .sb-toggle svg {
+    transform: rotate(180deg);
+  }
+
+  #commandbar {
+    bottom: calc(60px + env(safe-area-inset-bottom));
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .toast {
+    bottom: calc(var(--btn) + 76px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ───────────── Hochformat auf Touch-Geräten: Hinweis ───────────── */
+#rotate-hint {
+  display: none;
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: var(--bg);
+    color: var(--accent-2);
+    font-size: 20px;
+    font-weight: 800;
+    text-align: center;
+    padding: 24px;
+  }
+}
