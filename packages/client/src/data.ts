@@ -5,10 +5,11 @@ import factions from '@data/rules/factions.json';
 import ai from '@data/rules/ai.json';
 import commonUnits from '@data/units/common.json';
 import kristalltal from '@data/maps/kristalltal.json';
+import vierWinde from '@data/maps/vier-winde.json';
 
 /**
  * Lädt die Spieldaten aus dem data-Ordner. Neue Karten: JSON-Datei in
- * data/maps ablegen und hier in MAPS eintragen.
+ * data/maps ablegen und hier (und im Server unter src/data.ts) in MAPS eintragen.
  */
 
 let rulesCache: Rules | null = null;
@@ -25,9 +26,15 @@ export interface MapInfo {
   json: unknown;
 }
 
-export const MAPS: MapInfo[] = [{ id: 'kristalltal', nameKey: 'map.kristalltal.name', maxPlayers: 2, json: kristalltal }];
+export const MAPS: MapInfo[] = [
+  { id: 'kristalltal', nameKey: 'map.kristalltal.name', maxPlayers: 2, json: kristalltal },
+  { id: 'vier-winde', nameKey: 'map.vierWinde.name', maxPlayers: 4, json: vierWinde },
+];
+
+export function mapInfo(id: string): MapInfo {
+  return MAPS.find((m) => m.id === id) ?? MAPS[0];
+}
 
 export function loadMap(id: string): GameMap {
-  const info = MAPS.find((m) => m.id === id) ?? MAPS[0];
-  return parseTiledMap(info.json);
+  return parseTiledMap(mapInfo(id).json);
 }

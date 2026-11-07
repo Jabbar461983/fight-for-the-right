@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@colyseus/sdk": "^0.18.9",
     "@fftr/shared": "^0.1.0",
     "phaser": "^4.2.1"
   },

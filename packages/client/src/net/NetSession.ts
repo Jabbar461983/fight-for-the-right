@@ -1,0 +1,161 @@
+import { Client, type Room } from '@colyseus/sdk';
+import type { GameStartInfo, LobbyState, PingKind, Snapshot } from '@fftr/shared';
+
+/**
+ * Verbindung zum Mehrspieler-Server (Colyseus).
+ * Hält den Raum, puffert Momentaufnahmen und kümmert sich ums Wiederverbinden.
+ */
+
+const RESUME_KEY = 'fftr.resume';
+/** So lange nach einem Neuladen der Seite versuchen wir, in den alten Raum zurückzukehren. */
+const RESUME_MS = 2 * 60 * 1000;
+
+/** Server-Adresse: beim Bauen gesetzt (VITE_SERVER_URL), lokal Port 2567 auf demselben Rechner. */
+export function serverUrl(): string {
+  const env = import.meta.env.VITE_SERVER_URL as string | undefined;
+  if (env) return env;
+  const secure = location.protocol === 'https:';
+  return `${secure ? 'wss' : 'ws'}://${location.hostname}:2567`;
+}
+
+function httpUrl(): string {
+  return serverUrl().replace(/^ws/, 'http');
+}
+
+export interface PingMessage {
+  kind: PingKind;
+  x: number;
+  y: number;
+  from: string;
+  player: number;
+}
+
+export type ConnectionState = 'ok' | 'dropped' | 'lost';
+
+export class NetSession {
+  lobby: LobbyState | null = null;
+  start: GameStartInfo | null = null;
+  onLobby: ((l: LobbyState) => void) | null = null;
+  onStart: ((s: GameStartInfo) => void) | null = null;
+  onError: ((key: string) => void) | null = null;
+  onPing: ((p: PingMessage) => void) | null = null;
+  onConnection: ((s: ConnectionState) => void) | null = null;
+  private snapHandler: ((s: Snapshot) => void) | null = null;
+  private snapQueue: Snapshot[] = [];
+  private left = false;
+
+  private constructor(readonly room: Room) {
+    room.onMessage('lobby', (l: LobbyState) => {
+      this.lobby = l;
+      this.onLobby?.(l);
+    });
+    room.onMessage('start', (s: GameStartInfo) => {
+      this.start = s;
+      this.snapQueue = [];
+      this.onStart?.(s);
+    });
+    room.onMessage('snap', (s: Snapshot) => {
+      if (this.snapHandler) this.snapHandler(s);
+      else this.snapQueue.push(s);
+    });
+    room.onMessage('error', (e: { key: string }) => this.onError?.(e.key));
+    room.onMessage('ping', (p: PingMessage) => this.onPing?.(p));
+    room.onDrop(() => this.onConnection?.('dropped'));
+    room.onReconnect(() => {
+      this.saveResume();
+      this.onConnection?.('ok');
+    });
+    room.onLeave(() => {
+      if (!this.left) this.onConnection?.('lost');
+      sessionStorage.removeItem(RESUME_KEY);
+    });
+    room.onError((code, message) => console.warn('Raum-Fehler', code, message));
+    this.saveResume();
+  }
+
+  get isHost(): boolean {
+    return this.lobby?.hostSessionId === this.room.sessionId;
+  }
+
+  get sessionId(): string {
+    return this.room.sessionId;
+  }
+
+  /** Momentaufnahmen abholen: erst die gepufferten, dann laufend. */
+  setSnapshotHandler(fn: ((s: Snapshot) => void) | null): void {
+    this.snapHandler = fn;
+    if (fn) {
+      const q = this.snapQueue;
+      this.snapQueue = [];
+      for (const s of q) fn(s);
+    }
+  }
+
+  send(type: string, msg?: unknown): void {
+    this.room.send(type, msg);
+  }
+
+  async leave(): Promise<void> {
+    this.left = true;
+    sessionStorage.removeItem(RESUME_KEY);
+    try {
+      await this.room.leave(true);
+    } catch {
+      // schon weg
+    }
+  }
+
+  private saveResume(): void {
+    try {
+      sessionStorage.setItem(RESUME_KEY, JSON.stringify({ token: this.room.reconnectionToken, at: Date.now() }));
+    } catch {
+      // ignorieren
+    }
+  }
+
+  // ───────────── Verbinden ─────────────
+
+  /**
+   * Weckt den Server (der Gratis-Hoster schläft nach 15 Minuten ein) und meldet,
+   * wenn das länger dauert.
+   */
+  static async wake(onSlow: () => void): Promise<void> {
+    const slow = window.setTimeout(onSlow, 2500);
+    try {
+      const ctrl = new AbortController();
+      const timeout = window.setTimeout(() => ctrl.abort(), 90_000);
+      await fetch(`${httpUrl()}/health`, { signal: ctrl.signal }).catch(() => undefined);
+      clearTimeout(timeout);
+    } finally {
+      clearTimeout(slow);
+    }
+  }
+
+  static async create(name: string): Promise<NetSession> {
+    const client = new Client(serverUrl());
+    return new NetSession(await client.create('game', { name }));
+  }
+
+  static async join(code: string, name: string): Promise<NetSession> {
+    const client = new Client(serverUrl());
+    return new NetSession(await client.joinById(code, { name }));
+  }
+
+  /** Nach dem Neuladen der Seite: zurück in den alten Raum, falls möglich. */
+  static async resume(): Promise<NetSession | null> {
+    let saved: { token: string; at: number } | null = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(RESUME_KEY) ?? 'null');
+    } catch {
+      saved = null;
+    }
+    if (!saved || Date.now() - saved.at > RESUME_MS) return null;
+    try {
+      const client = new Client(serverUrl());
+      return new NetSession(await client.reconnect(saved.token));
+    } catch {
+      sessionStorage.removeItem(RESUME_KEY);
+      return null;
+    }
+  }
+}
