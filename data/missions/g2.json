@@ -20,7 +20,7 @@
     {
       "when": [{ "type": "start" }],
       "do": [
-        { "type": "base", "owner": 1, "at": [15, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory"] },
+        { "type": "base", "owner": 1, "at": [15, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "silo", "silo"] },
         { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 2, "at": "home" },
         { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 3, "at": "home" },
         { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 1, "at": "home" },

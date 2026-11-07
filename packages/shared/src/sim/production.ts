@@ -36,7 +36,10 @@ export function availability(sim: Simulation, player: number, def: UnitDef | Bui
   const missing = def.buildable ? def.prerequisites.filter((p) => !owned.has(p)) : [def.id];
   const cat = def.category as ProductionCategory;
   const noProducer = producersOf(sim, player, cat).length === 0;
-  const locked = !!sim.players[player]?.locked?.has(def.id);
+  // Gesperrt: selbst oder über ein gesperrtes Voraussetzungs-Gebäude (z.B. Hubschrauber ohne Flugfeld)
+  const lockedSet = sim.players[player]?.locked;
+  // «*» sperrt alles (Missionen ohne Basis)
+  const locked = !!lockedSet && (lockedSet.has('*') || lockedSet.has(def.id) || def.prerequisites.some((p) => lockedSet.has(p)));
   return { available: missing.length === 0 && !noProducer && !locked, missing, noProducer, locked };
 }
 

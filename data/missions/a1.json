@@ -10,7 +10,7 @@
     { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
     { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" }
   ],
-  "credits": { "easy": 6000, "medium": 4500, "hard": 3500 },
+  "credits": { "easy": 5000, "medium": 4000, "hard": 3500 },
   "locked": ["airfield", "shipyard", "techCenter", "flakPosition", "rocketBattery", "bunker", "repairStation"],
   "areas": {
     "playerBase": [5, 48, 12, 12],

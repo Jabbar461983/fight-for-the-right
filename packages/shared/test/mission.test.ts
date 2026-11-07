@@ -3,7 +3,7 @@ import { AI_LEVELS, type AiLevel } from '../src/data/rules';
 import { MoveClass } from '../src/map/terrain';
 import { TICK_RATE, TILE, tileCenter, tileOf } from '../src/math/fixed';
 import { createMission, loadMission, type MissionDef } from '../src/mission/mission';
-import { placeBuilding } from '../src/sim/production';
+import { availability, placeBuilding } from '../src/sim/production';
 import type { Simulation } from '../src/sim/simulation';
 import { loadData, loadMap, rules, run } from './helpers';
 
@@ -40,6 +40,27 @@ describe('Missionen', () => {
         run(sim, 15 * 20);
         expect(sim.gameOver, `${id}/${level}: nicht sofort vorbei`).toBeNull();
       }
+    }
+  });
+
+  it('alle Texte der Missionen gibt es auf Deutsch und Englisch', () => {
+    const de = loadData('i18n/de.json') as Record<string, string>;
+    const en = loadData('i18n/en.json') as Record<string, string>;
+    for (const id of MISSIONS) {
+      const def = mission(id);
+      const keys = [def.titleKey, def.briefingKey, ...def.briefingGoals, ...def.players.map((p) => p.nameKey)];
+      for (const e of def.events) {
+        for (const a of e.do) {
+          if ('key' in a && a.key) keys.push(a.key);
+        }
+      }
+      for (const k of keys) {
+        expect(de[k], `de: ${k}`).toBeTruthy();
+        expect(en[k], `en: ${k}`).toBeTruthy();
+      }
+    }
+    for (const k of ['mission.lost.surrender', 'unit.researcher', 'map.nebelwald.name']) {
+      expect(de[k] && en[k], k).toBeTruthy();
     }
   });
 
@@ -96,11 +117,28 @@ describe('Missionen', () => {
     expect(sim.gameOver?.winners).toEqual([2]);
   });
 
+  it('Aufgeben beendet die Mission mit Niederlage', () => {
+    const { sim, mission: m } = start('g1', 'easy');
+    sim.issue(1, { type: 'surrender' });
+    run(sim, 3);
+    expect(m.result).toBe('defeat');
+    expect(sim.gameOver).not.toBeNull();
+  });
+
   it('A1: gesperrte Gebäude sind nicht baubar', () => {
     const { sim } = start('a1');
     expect(sim.issue(1, { type: 'queue', category: 'building', item: 'airfield', action: 'add' })).toBe(true);
     run(sim, 2);
     expect(sim.players[1].queues.building.length).toBe(0);
+    // Hubschrauber brauchen das gesperrte Flugfeld → ebenfalls gesperrt
+    expect(availability(sim, 1, rules.unit('aero', 'gunship')!).locked).toBe(true);
+    expect(availability(sim, 1, rules.unit('aero', 'lightTank')!).locked).toBe(false);
+  });
+
+  it('A2: «*» sperrt alles (keine Basis)', () => {
+    const { sim } = start('a2');
+    expect(availability(sim, 1, rules.building('aero', 'powerPlant')!).locked).toBe(true);
+    expect(availability(sim, 1, rules.unit('aero', 'rifleman')!).locked).toBe(true);
   });
 
   it('A2 Rettung: Wege existieren, Befreien wechselt den Besitzer, Abholpunkt → Sieg', () => {

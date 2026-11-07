@@ -23,7 +23,7 @@
       "when": [{ "type": "start" }],
       "do": [
         { "type": "building", "owner": 1, "building": "constructionYard", "at": [12, 12], "tag": "hq" },
-        { "type": "base", "owner": 1, "at": [12, 12], "buildings": ["powerPlant", "powerPlant", "refinery", "barracks", "factory"] },
+        { "type": "base", "owner": 1, "at": [12, 12], "buildings": ["powerPlant", "powerPlant", "refinery", "barracks", "factory", "silo"] },
         { "type": "building", "owner": 1, "building": "cannonTower", "at": [21, 17] },
         { "type": "building", "owner": 1, "building": "mgTower", "at": [17, 21] },
         { "type": "building", "owner": 1, "building": "mgTower", "at": [23, 11], "difficulty": ["easy", "medium"] },

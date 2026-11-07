@@ -129,7 +129,7 @@ export const MissionSchema = z.object({
     .min(2),
   /** Startkapital des Spielers (id 1). */
   credits: Num,
-  /** Gesperrte Einheiten/Gebäude für den Spieler. */
+  /** Gesperrte Einheiten/Gebäude für den Spieler («*» = alles, z.B. Kommando-Missionen ohne Basis). */
   locked: z.array(z.string()).default([]),
   areas: z.record(z.string(), Area).default({}),
   events: z.array(Event).min(1),
@@ -231,7 +231,13 @@ export class Mission implements TickListener {
   }
 
   update(sim: Simulation): void {
-    if (this.result || sim.gameOver || sim.tick % CHECK_INTERVAL !== 0) return;
+    if (this.result || sim.gameOver) return;
+    // Aufgegeben
+    if (sim.players[1]?.defeated) {
+      this.finish(false, 'mission.lost.surrender');
+      return;
+    }
+    if (sim.tick % CHECK_INTERVAL !== 0) return;
     this.def.events.forEach((e, i) => {
       if (this.result || !this.active(e.difficulty)) return;
       const st = this.state[i];
@@ -497,6 +503,8 @@ export interface MissionSetup {
   map: GameMap;
   rules: Rules;
   difficulty: AiLevel;
+  /** Übersetzt die Spielernamen (Client); ohne bleibt der Textschlüssel stehen. */
+  translate?: (key: string) => string;
 }
 
 /** Erstellt Simulation + Mission. Der Spieler hat immer die id 1. */
@@ -506,7 +514,7 @@ export function createMission(setup: MissionSetup): { sim: Simulation; mission: 
     map: setup.map,
     rules: setup.rules,
     victory: 'none',
-    players: def.players.map((p) => ({ id: p.id, faction: p.faction, team: p.team, color: p.color, name: p.nameKey })),
+    players: def.players.map((p) => ({ id: p.id, faction: p.faction, team: p.team, color: p.color, name: setup.translate?.(p.nameKey) ?? p.nameKey })),
   });
   const mission = new Mission(def, setup.difficulty, sim);
   sim.players[1].credits = mission.num(def.credits);
