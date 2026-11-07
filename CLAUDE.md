@@ -96,7 +96,8 @@ markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt d
   Achtung: Jedes Server-Deployment startet den Server neu → laufende Partien enden. Nicht während Spielrunden pushen.
   Adresse: https://fight-for-the-right.onrender.com (GitHub-Variable `SERVER_URL` = wss://…).
   Lasttest: `node scripts/load-test.ts wss://fight-for-the-right.onrender.com 120` (4 Spieler, misst Ticks/s).
-  Gemessen 7.11.2026: 15 Ticks/s stabil, Aufnahmen alle 132 ms (95 % < 136 ms).
+  Gemessen 7.11.2026: 15 Ticks/s stabil über 8 Min. mit 4 Spielern inkl. KI-Angriffen,
+  Aufnahmen alle 132 ms (95 % < 136 ms).
 
 ### Karten
 - Format: Tiled-JSON, Ebene `terrain` (Tileset-Kacheln mit Eigenschaft `terrain`), Objektebene mit
@@ -131,7 +132,7 @@ npm run maps         # Startkarten neu erzeugen
 
 - **Etappe 1 – Fundament:** abgenommen (7.11.2026). Grafik wurde als «sehr rudimentär» empfunden →
   in Etappe 2 bessere Platzhalter (runde Geländeränder, Fraktions-Look) gezeichnet.
-- **Etappe 3 – Multiplayer:** umgesetzt, wartet auf Abnahme. Räume mit Code/Link, Lobby (Plätze: Mensch/KI/
+- **Etappe 3 – Multiplayer:** abgenommen (7.11.2026, Test mit mehreren Geräten durch Christian). Räume mit Code/Link, Lobby (Plätze: Mensch/KI/
   offen/zu, Fraktion, Farbe, Team, Bereit, Chat mit vorgefertigten Nachrichten), Modi Jeder-gegen-jeden /
   Teams / Gemeinsam gegen KI, Schnellnachrichten mit Ping, Wiederverbinden, KI-Übernahme, Endstatistik.
   Karte «Vier Winde» (4 Spieler) vorgezogen für die 2v2-Abnahme. Gefecht gegen KI jetzt mit 1–3 Gegnern.
