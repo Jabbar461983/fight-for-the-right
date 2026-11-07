@@ -31,6 +31,7 @@ import { t } from '../i18n';
 import { InputController, type InputTarget } from '../input/InputController';
 import { getSettings, markMissionDone } from '../storage';
 import { portrait, type PortraitKind } from '../ui/portraits';
+import { music, play, type Sfx } from '../audio/sound';
 import { Hud, type BuildItemState, type BuildTab, type HudActions } from '../ui/Hud';
 import type { GameConfig } from '../ui/Menu';
 import { MINIMAP_COLORS, paintTerrain } from './terrainPainter';
@@ -53,6 +54,16 @@ const PICK_TOLERANCE_TOUCH = 22;
 const TURN_SPEED = 9;
 
 /** Zeichenebenen (Tiefe). */
+/** Schussgeräusch je Geschossart. */
+const SHOT_SOUND: Record<string, Sfx> = {
+  bullet: 'bullet',
+  cannon: 'cannon',
+  shell: 'cannon',
+  rocket: 'rocket',
+  flak: 'flak',
+  bomb: 'bomb',
+};
+
 const DEPTH = {
   terrain: 0,
   crystal: 2,
@@ -254,6 +265,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     if (wagon) this.selection.add(wagon.id);
     if (this.mission) this.hud.setObjectives(this.mission.objectives);
     else this.hud.message(t('msg.welcome'), 'info', true);
+    music('battle');
     this.updateHud();
 
     if (import.meta.env.DEV) (window as unknown as { fftr: unknown }).fftr = { scene: this, sim: this.sim };
@@ -599,6 +611,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           if (this.visibleAt(e.x, e.y)) {
             if (e.category === 'infantry') this.fxInfantryOut(unitsToPx(e.x), unitsToPx(e.y));
             else this.fxBoom(unitsToPx(e.x), unitsToPx(e.y), 1);
+            this.sfxAt(e.category === 'infantry' ? 'puff' : 'boomSmall', e.x, e.y);
           }
           break;
         case 'buildingDestroyed':
@@ -609,6 +622,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
               const oy = (Math.random() - 0.5) * e.h * TILE_PX * 0.8;
               this.time.delayedCall(i * 120, () => this.fxBoom(unitsToPx(e.x) + ox, unitsToPx(e.y) + oy, 1.2));
             }
+            this.sfxAt('boomBig', e.x, e.y, true);
           }
           if (e.owner === me && performance.now() - this.lastLostMsg > 3000) {
             this.lastLostMsg = performance.now();
@@ -616,24 +630,36 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           }
           break;
         case 'impact':
-          if (this.visibleAt(e.x, e.y)) this.fxImpact(unitsToPx(e.x), unitsToPx(e.y), e.weaponId, e.splash);
+          if (this.visibleAt(e.x, e.y)) {
+            this.fxImpact(unitsToPx(e.x), unitsToPx(e.y), e.weaponId, e.splash);
+            if (e.splash > 0) this.sfxAt('boomSmall', e.x, e.y);
+          }
+          break;
+        case 'fired':
+          if (this.visibleAt(e.x, e.y)) {
+            if (!getSettings().lowFx) this.fxMuzzle(e.sourceId, e.weaponId);
+            this.sfxAt(SHOT_SOUND[this.rules.weapons.get(e.weaponId)?.projectile ?? 'bullet'] ?? 'bullet', e.x, e.y);
+          }
           break;
         case 'underAttack':
           if (e.owner === me) {
             this.lastEventPos = { x: e.x, y: e.y };
             this.hud.message(t('msg.underAttack'), 'warn', true);
+            play('alert', 0.8);
           }
           break;
         case 'buildingReady':
           if (e.owner === me) {
             const def = this.rules.building(this.sim.players[me].faction, e.defId);
             this.hud.message(t('msg.buildingReady', { name: def ? t(def.nameKey) : e.defId }), 'good');
+            play('build');
           }
           break;
         case 'unitReady':
           if (e.owner === me) {
             const def = this.rules.unit(this.sim.players[me].faction, e.defId);
             this.hud.message(t('msg.unitReady', { name: def ? t(def.nameKey) : e.defId }), 'info');
+            play('ready', 0.7);
           }
           break;
         case 'lowPower':
@@ -656,13 +682,17 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           // Funkspruch: eigene Kommandantin, Gegnerin oder die Forscherin
           const own = this.sim.players[me]?.faction ?? 'aero';
           const kind: PortraitKind = e.speaker === 'researcher' ? 'researcher' : e.speaker === 'enemy' ? (own === 'aero' ? 'granite' : 'aero') : own;
+          play('radio', 0.7);
           this.hud.radio(t(e.key), portrait(kind, e.speaker === 'enemy' ? 'angry' : 'normal'), t(kind === 'researcher' ? 'commander.researcher' : `commander.${kind}`));
           break;
         }
         case 'objective':
           if (this.mission) this.hud.setObjectives(this.mission.objectives);
           if (e.status === 'open') this.hud.message(t('mission.newObjective', { text: t(e.key) }), 'info');
-          else if (e.status === 'done') this.hud.message(t('mission.objectiveDone', { text: t(e.key) }), 'good');
+          else if (e.status === 'done') {
+            this.hud.message(t('mission.objectiveDone', { text: t(e.key) }), 'good');
+            play('objective');
+          }
           else this.hud.message(t('mission.objectiveFailed', { text: t(e.key) }), 'warn');
           break;
         case 'missionEnd':
@@ -688,6 +718,46 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     }
   }
 
+  /**
+   * Effekt-Ton an einer Weltposition: nur in der Nähe des Bildausschnitts hörbar,
+   * leiser am Rand, links/rechts verteilt. `always` = auch ausserhalb (leise).
+   */
+  private sfxAt(name: Sfx, x: number, y: number, always = false): void {
+    const cam = this.cameras.main;
+    const view = cam.worldView;
+    if (view.width <= 0) return;
+    const px = unitsToPx(x);
+    const py = unitsToPx(y);
+    const dx = (px - view.centerX) / (view.width / 2);
+    const dy = (py - view.centerY) / (view.height / 2);
+    const d = Math.max(Math.abs(dx), Math.abs(dy));
+    if (d > 1.3 && !always) return;
+    const vol = d <= 1 ? 1 - d * 0.35 : always ? 0.25 : 0.3;
+    play(name, vol, Math.max(-0.8, Math.min(0.8, dx * 0.6)));
+  }
+
+  /** Mündungsfeuer am Schützen (Einheit oder Turm). */
+  private fxMuzzle(sourceId: number, weaponId: string): void {
+    const u = this.sim.getUnit(sourceId);
+    const b = u ? undefined : this.sim.getBuilding(sourceId);
+    const src = u ?? b;
+    if (!src) return;
+    const v = u ? this.views.get(u.id) : undefined;
+    const x = v ? v.x : unitsToPx(src.x);
+    const y = v ? v.y : unitsToPx(src.y);
+    const len = Math.hypot(src.aimX, src.aimY) || 1;
+    const r = u ? unitsToPx(u.def.radiusUnits) + 4 : 14;
+    const kind = this.rules.weapons.get(weaponId)?.projectile ?? 'bullet';
+    const big = kind === 'cannon' || kind === 'shell';
+    const flash = this.add
+      .image(x + (src.aimX / len) * r, y + (src.aimY / len) * r, 'fx_star')
+      .setDepth(DEPTH.effect)
+      .setTint(0xfff1a8)
+      .setScale(big ? 0.55 : 0.3)
+      .setRotation(Math.random() * 6);
+    this.tweens.add({ targets: flash, scale: flash.scale * 1.5, alpha: 0, duration: big ? 140 : 90, onComplete: () => flash.destroy() });
+  }
+
   /** «Puff!» – Infanterie verschwindet in einer Wolke und schwebt am Fallschirm davon. */
   private fxInfantryOut(x: number, y: number): void {
     const puff = this.add.image(x, y, 'fx_puff').setDepth(DEPTH.effect).setScale(0.2);
@@ -708,7 +778,8 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   private fxBoom(x: number, y: number, size: number): void {
     const boom = this.add.image(x, y, 'fx_boom').setDepth(DEPTH.effect).setScale(0.15 * size).setRotation(Math.random() * 6);
     this.tweens.add({ targets: boom, scale: 0.6 * size, alpha: 0, duration: 500, ease: 'Back.easeOut', onComplete: () => boom.destroy() });
-    for (let i = 0; i < 4; i++) {
+    const stars = getSettings().lowFx ? 0 : 4;
+    for (let i = 0; i < stars; i++) {
       const a = Math.random() * Math.PI * 2;
       const star = this.add.image(x, y, 'fx_star').setDepth(DEPTH.effect + 1).setScale(0.6);
       this.tweens.add({
@@ -1412,7 +1483,10 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   }
 
   sellSelected(): void {
-    if (this.selectedBuilding) this.issue({ type: 'sell', building: this.selectedBuilding });
+    if (this.selectedBuilding) {
+      this.issue({ type: 'sell', building: this.selectedBuilding });
+      play('sell');
+    }
     this.selectedBuilding = 0;
     this.updateHud();
   }
@@ -1488,9 +1562,11 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const { tx, ty } = this.placeTile;
     if (!canPlace(this.sim, this.local, def, tx, ty).ok) {
       this.hud.message(t('msg.cannotPlace'), 'warn');
+      play('error');
       return;
     }
     this.issue({ type: 'place', category, tx, ty });
+    play('place');
     this.cancelPlacement();
   }
 
@@ -1606,6 +1682,8 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const campaign = this.mission
       ? { reason: this.missionEndKey ? t(this.missionEndKey) : undefined, hasNext: victory && !!this.nextMissionId() }
       : undefined;
+    music(null);
+    this.time.delayedCall(900, () => play(victory ? 'victory' : 'defeat'));
     // Kurz warten, damit die letzten Explosionen noch zu sehen sind
     this.time.delayedCall(1500, () => this.hud.showEnd(victory, rows, (this.sim.tick * TICK_MS) / 1000, campaign));
   }

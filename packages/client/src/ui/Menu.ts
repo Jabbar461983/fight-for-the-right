@@ -18,6 +18,7 @@ import { PLAYER_COLORS, iconFor } from '../game/textures';
 import { NetSession } from '../net/NetSession';
 import { getItem, getSettings, loadProgress, saveLastDifficulty, saveSettings, setItem, type CampaignProgress } from '../storage';
 import { portrait } from './portraits';
+import { play, setVolumes } from '../audio/sound';
 
 /** Alles, was die Spielszene für eine Partie braucht. */
 export interface GameConfig {
@@ -697,9 +698,10 @@ export class Menu {
               .map((v) => `<option value="${v}" ${s.gameSpeed === v ? 'selected' : ''}>${v}×</option>`)
               .join('')}</select>
           </label>
-          <label class="disabled"><span data-i18n="settings.music"></span><input type="range" min="0" max="1" step="0.1" value="${s.musicVolume}" disabled /></label>
-          <label class="disabled"><span data-i18n="settings.sfx"></span><input type="range" min="0" max="1" step="0.1" value="${s.sfxVolume}" disabled /></label>
-          <small data-i18n="settings.audioLater"></small>
+          <label><span data-i18n="settings.music"></span><input id="vol-music" type="range" min="0" max="1" step="0.1" value="${s.musicVolume}" /></label>
+          <label><span data-i18n="settings.sfx"></span><input id="vol-sfx" type="range" min="0" max="1" step="0.1" value="${s.sfxVolume}" /></label>
+          <label class="check"><input id="low-fx" type="checkbox" ${s.lowFx ? 'checked' : ''} /><span data-i18n="settings.lowFx"></span></label>
+          <small data-i18n="settings.lowFxHint"></small>
         </div>
         <div class="menu-actions"><button type="button" data-go="main" data-i18n="menu.back"></button></div>
       </div>`;
@@ -708,6 +710,19 @@ export class Menu {
     );
     this.root.querySelector<HTMLSelectElement>('#speed')!.addEventListener('change', (e) => {
       void saveSettings({ gameSpeed: Number((e.target as HTMLSelectElement).value) });
+    });
+    const music = this.root.querySelector<HTMLInputElement>('#vol-music')!;
+    const sfx = this.root.querySelector<HTMLInputElement>('#vol-sfx')!;
+    const applyVol = () => {
+      setVolumes(Number(music.value), Number(sfx.value));
+      void saveSettings({ musicVolume: Number(music.value), sfxVolume: Number(sfx.value) });
+    };
+    music.addEventListener('input', applyVol);
+    sfx.addEventListener('input', applyVol);
+    // Hörprobe beim Loslassen
+    sfx.addEventListener('change', () => play('build'));
+    this.root.querySelector<HTMLInputElement>('#low-fx')!.addEventListener('change', (e) => {
+      void saveSettings({ lowFx: (e.target as HTMLInputElement).checked });
     });
     this.bindGo();
   }

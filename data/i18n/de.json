@@ -259,6 +259,7 @@
   "help.mouse.transport": "Einheiten wählen, Rechtsklick auf eigenen Transporter/Bunker: einsteigen",
   "help.touch.transport": "Einheiten wählen, auf eigenen Transporter/Bunker tippen: einsteigen",
 
+  "settings.lowFx": "Weniger Effekte (für ältere Tablets)",`n  "settings.lowFxHint": "Spart Rechenleistung: kein Mündungsfeuer, kleinere Explosionen.",
   "unit.researcher": "Forscherin",
   "map.nebelwald.name": "Nebelwald",
 

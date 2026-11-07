@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { GameScene, type GameSceneData } from './game/GameScene';
+import { music, play, setVolumes, unlockAudio } from './audio/sound';
 import { applyI18n } from './i18n';
 import { loadSettings } from './storage';
 import { Menu, type GameConfig } from './ui/Menu';
@@ -11,7 +12,21 @@ import './style.css';
  */
 
 applyI18n(document);
-void loadSettings();
+void loadSettings().then((s) => setVolumes(s.musicVolume, s.sfxVolume));
+
+// Ton: erst nach der ersten Berührung erlaubt; Klick-Geräusch für alle Knöpfe
+const unlock = () => unlockAudio();
+window.addEventListener('pointerdown', unlock, true);
+window.addEventListener('keydown', unlock, true);
+document.addEventListener(
+  'click',
+  (e) => {
+    const b = (e.target as HTMLElement | null)?.closest('button');
+    if (b && !b.disabled) play('click', 0.6);
+  },
+  true,
+);
+music('menu');
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -48,6 +63,7 @@ function startGame(config: GameConfig): void {
     onExit: (next) => {
       game.scene.stop('game');
       app.classList.remove('in-game');
+      music('menu');
       if (next?.briefing) menu.openBriefing(next.briefing);
       else menu.show(config.mission ? 'campaign' : 'main');
     },

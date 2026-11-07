@@ -85,9 +85,11 @@ export interface Settings {
   gameSpeed: number;
   musicVolume: number;
   sfxVolume: number;
+  /** Weniger Effekte (Mündungsfeuer, Funken) für ältere Tablets. */
+  lowFx: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { gameSpeed: 1, musicVolume: 0.6, sfxVolume: 0.8 };
+export const DEFAULT_SETTINGS: Settings = { gameSpeed: 1, musicVolume: 0.6, sfxVolume: 0.8, lowFx: false };
 
 let settings: Settings = { ...DEFAULT_SETTINGS };
 
