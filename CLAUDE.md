@@ -93,6 +93,10 @@ markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt d
 - Server-Adresse im Client: `VITE_SERVER_URL` (beim Bauen, GitHub-Variable `SERVER_URL`), lokal `ws://<host>:2567`.
 - Hosting: **Render Free** (Frankfurt) über `render.yaml`; schläft nach 15 Min. ohne Spieler, Aufwachen ≈ 1 Min.
   (der Client weckt per `/health` und zeigt einen Hinweis). Deploy nach grüner CI (`autoDeployTrigger: checksPass`).
+  Achtung: Jedes Server-Deployment startet den Server neu → laufende Partien enden. Nicht während Spielrunden pushen.
+  Adresse: https://fight-for-the-right.onrender.com (GitHub-Variable `SERVER_URL` = wss://…).
+  Lasttest: `node scripts/load-test.ts wss://fight-for-the-right.onrender.com 120` (4 Spieler, misst Ticks/s).
+  Gemessen 7.11.2026: 15 Ticks/s stabil, Aufnahmen alle 132 ms (95 % < 136 ms).
 
 ### Karten
 - Format: Tiled-JSON, Ebene `terrain` (Tileset-Kacheln mit Eigenschaft `terrain`), Objektebene mit
