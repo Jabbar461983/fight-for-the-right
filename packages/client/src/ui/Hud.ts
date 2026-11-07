@@ -55,6 +55,7 @@ export class Hud {
     this.toast.hidden = true;
     commandBar.parentElement!.appendChild(this.toast);
     applyI18n(document);
+    this.setSelection([], true);
     onLangChange(() => this.setSelection(this.lastSelection, true));
   }
 
