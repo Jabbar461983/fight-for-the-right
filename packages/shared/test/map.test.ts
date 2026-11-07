@@ -79,6 +79,21 @@ describe('Karte', () => {
     }
   });
 
+  it('Vier Winde: 4 verbundene Startplätze, vierfach drehsymmetrisch', () => {
+    const m = loadMap('vier-winde');
+    const spawns = m.objectsOfKind('spawn');
+    expect(spawns.map((s) => s.props.player).sort()).toEqual([1, 2, 3, 4]);
+    for (const cls of [MoveClass.Vehicle, MoveClass.Infantry]) {
+      const comps = spawns.map((s) => m.componentOf(tileOf(s.x), tileOf(s.y), cls));
+      expect(comps[0]).toBeGreaterThanOrEqual(0);
+      expect(new Set(comps).size).toBe(1);
+    }
+    for (let y = 0; y < m.height; y++) {
+      for (let x = 0; x < m.width; x++) expect(m.terrainAt(x, y)).toBe(m.terrainAt(m.width - 1 - y, x));
+    }
+    expect(m.objectsOfKind('crystalField').length).toBe(9);
+  });
+
   it('lehnt kaputte Kartendateien mit verständlicher Meldung ab', () => {
     const good = loadData('maps/kristalltal.json') as Record<string, unknown>;
     expect(() => parseTiledMap({ ...good, layers: [] })).toThrow(/terrain/);
