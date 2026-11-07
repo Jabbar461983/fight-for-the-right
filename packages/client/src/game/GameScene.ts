@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import {
+  MoveClass,
   NetIndex,
   STANCES,
   Simulation,
@@ -39,6 +40,7 @@ import {
   ensureBuildingTexture,
   ensureUnitTexture,
   iconFor,
+  NEUTRAL_COLOR,
 } from './textures';
 
 const MIN_ZOOM = 0.45;
@@ -57,6 +59,7 @@ const DEPTH = {
   turret: 21,
   projectile: 40,
   effect: 50,
+  air: 60,
   fog: 80,
   overlay: 90,
   marker: 95,
@@ -65,6 +68,11 @@ const DEPTH = {
 interface UnitView {
   body: Phaser.GameObjects.Image;
   turret: Phaser.GameObjects.Image | null;
+  shadow: Phaser.GameObjects.Image | null;
+  rotor: Phaser.GameObjects.Image | null;
+  dirt: Phaser.GameObjects.Image | null;
+  /** Flughöhe in Pixel (Darstellung). */
+  alt: number;
   angle: number;
   turretAngle: number;
   x: number;
@@ -191,7 +199,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       this.netIndex = new NetIndex(this.sim);
       this.snapInterval = (TICK_MS * 2) / (this.cfg.speed ?? 1);
     } else {
-      this.sim = createSkirmish({ map, rules: this.rules, slots: this.cfg.slots, startCredits: this.cfg.startCredits });
+      this.sim = createSkirmish({ map, rules: this.rules, slots: this.cfg.slots, startCredits: this.cfg.startCredits, bonusPoints: this.cfg.bonusPoints ?? true });
     }
 
     createCommonTextures(this);
@@ -325,6 +333,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   }
 
   private colorOf(player: number): number {
+    if (player === 0) return NEUTRAL_COLOR;
     return PLAYER_COLORS[this.sim.players[player]?.color ?? 0] ?? 0x888888;
   }
 
@@ -332,13 +341,21 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const color = this.colorOf(u.owner);
     const x = unitsToPx(u.x);
     const y = unitsToPx(u.y);
-    const depth = u.def.category === 'infantry' ? DEPTH.infantry : DEPTH.vehicle;
+    const air = u.def.airborne;
+    const depth = air ? DEPTH.air : u.def.category === 'infantry' ? DEPTH.infantry : DEPTH.vehicle;
     const body = this.add.image(x, y, ensureUnitTexture(this, u.def, color)).setScale(TEX_SCALE).setDepth(depth);
     const turret = u.def.turret
-      ? this.add.image(x, y, ensureUnitTexture(this, u.def, color, 'turret')).setScale(TEX_SCALE).setDepth(DEPTH.turret)
+      ? this.add.image(x, y, ensureUnitTexture(this, u.def, color, 'turret')).setScale(TEX_SCALE).setDepth(depth + 1)
       : null;
+    // Flieger: Schatten am Boden, Helikopter mit Rotor
+    const r = unitsToPx(u.def.radiusUnits);
+    const shadow = air ? this.add.image(x, y, 'fx_shadow').setDisplaySize(r * 3, r * 2.2).setDepth(DEPTH.vehicle + 2) : null;
+    const rotor = u.def.sprite === 'gunship' || u.def.sprite === 'transportHeli' ? this.add.image(x, y, 'fx_rotor').setScale(TEX_SCALE).setDepth(depth + 2) : null;
+    const dirt = u.def.burrows ? this.add.image(x, y, 'fx_dirt').setScale(TEX_SCALE).setDepth(DEPTH.crystal + 1).setVisible(false) : null;
+    // Jetpack-Infanterie fliegt nur knapp über dem Boden
+    const alt = air ? (u.def.sprite === 'radarZeppelin' || u.def.sprite === 'bomberAirship' ? 22 : 16) : u.def.moveClassId === MoveClass.Air ? 6 : 0;
     const angle = Math.atan2(u.dirY, u.dirX);
-    return { body, turret, angle, turretAngle: angle, x, y, visible: true };
+    return { body, turret, shadow, rotor, dirt, alt, angle, turretAngle: angle, x, y, visible: true };
   }
 
   private createBuildingView(def: BuildingDef, owner: number, tx: number, ty: number): BuildingView {
@@ -416,16 +433,28 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
         v = this.createUnitView(u);
         this.views.set(u.id, v);
       }
-      v.x = unitsToPx(u.prevX + (u.x - u.prevX) * alpha);
-      v.y = unitsToPx(u.prevY + (u.y - u.prevY) * alpha);
-      const visible = this.sim.isAlly(this.local, u.owner) || this.sim.isVisible(this.local, tileOf(u.x), tileOf(u.y));
+      const groundX = unitsToPx(u.prevX + (u.x - u.prevX) * alpha);
+      const groundY = unitsToPx(u.prevY + (u.y - u.prevY) * alpha);
+      // Luftschiffe schaukeln leicht
+      const bob = v.alt > 18 ? Math.sin(this.time.now / 500 + u.id) * 2 : 0;
+      v.x = groundX;
+      v.y = groundY - v.alt + bob;
+      const visible = this.sim.canSee(this.local, u);
       v.visible = visible;
       v.body.setVisible(visible);
       v.turret?.setVisible(visible);
+      v.shadow?.setVisible(visible).setPosition(groundX + 4, groundY + 4);
+      v.rotor?.setVisible(visible);
+      if (v.dirt) {
+        // Eingegraben: nur ein Erdhügel (für den Besitzer halb durchsichtig sichtbar)
+        v.dirt.setVisible(visible && u.burrowed).setPosition(groundX, groundY);
+        v.body.setAlpha(u.burrowed ? 0.3 : 1);
+      }
       if (!visible) continue;
       const target = Math.atan2(u.dirY, u.dirX);
       v.angle = turnTowards(v.angle, target, TURN_SPEED * dt);
       v.body.setPosition(v.x, v.y).setRotation(v.angle);
+      v.rotor?.setPosition(v.x, v.y).setRotation(this.time.now / 40);
       if (v.turret) {
         const aiming = u.targetId !== 0 || u.task?.kind === 'attack';
         const tAngle = aiming ? Math.atan2(u.aimY, u.aimX) : v.angle;
@@ -438,6 +467,9 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       if (this.sim.getUnit(id)) continue;
       v.body.destroy();
       v.turret?.destroy();
+      v.shadow?.destroy();
+      v.rotor?.destroy();
+      v.dirt?.destroy();
       this.views.delete(id);
       this.selection.delete(id);
     }
@@ -590,6 +622,16 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           if (e.owner === me) this.hud.message(t('msg.captured'), 'good', true);
           else if (e.previousOwner === me) this.hud.message(t('msg.lostBuilding'), 'warn', true);
           break;
+        case 'cannotUnload':
+          if (e.owner === me) this.hud.message(t('msg.cannotUnload'), 'warn', true);
+          break;
+        case 'surfaced':
+          // Maulwurf taucht auf: Erdbrocken fliegen
+          if (this.sim.isAlly(me, e.owner) || this.sim.isVisible(me, tileOf(e.x), tileOf(e.y))) {
+            const d = this.add.image(unitsToPx(e.x), unitsToPx(e.y), 'fx_dirt').setDepth(DEPTH.effect).setScale(TEX_SCALE);
+            this.tweens.add({ targets: d, scale: TEX_SCALE * 2, alpha: 0, duration: 600, onComplete: () => d.destroy() });
+          }
+          break;
         case 'cannotDeploy':
           if (e.owner === me) this.hud.message(t('msg.cannotDeploy'), 'warn', true);
           break;
@@ -673,6 +715,21 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       if (!v || !v.visible) continue;
       if (u.hp >= u.def.hp && !this.selection.has(u.id)) continue;
       this.healthBar(g, v.x, v.y - unitsToPx(u.def.radiusUnits) - 6, unitsToPx(u.def.radiusUnits) * 2 + 6, u.hp / u.def.hp);
+    }
+    // Eigene Transporter: Passagier-Punkte; Jets ohne Munition: rotes Ausrufezeichen
+    for (const u of this.sim.units) {
+      const v = this.views.get(u.id);
+      if (!v || !v.visible || u.owner !== this.local) continue;
+      const r = unitsToPx(u.def.radiusUnits);
+      if (u.def.transport && u.passengers.length > 0) {
+        g.fillStyle(0xffcf4a, 1);
+        for (let i = 0; i < u.passengers.length; i++) g.fillCircle(v.x - r + 3 + i * 6, v.y + r + 4, 2.5);
+      }
+      if (u.def.ammo && u.ammo === 0) {
+        g.fillStyle(0xe8503a, 1);
+        g.fillRect(v.x + r, v.y - r - 8, 3, 6);
+        g.fillRect(v.x + r, v.y - r, 3, 2);
+      }
     }
     for (const b of this.sim.buildings) {
       const v = this.bviews.get(b.id);
@@ -833,7 +890,8 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       armed: this.armed,
       stance: armed.length > 0 ? armed[0].stance : null,
       canDeploy: units.some((u) => u.def.deploysTo),
-      building: sb && sb.owner === this.local ? { repairing: sb.repairing, damaged: sb.hp < sb.def.hp } : null,
+      canUnload: units.some((u) => u.passengers.length > 0),
+      building: sb && sb.owner === this.local ? { repairing: sb.repairing, damaged: sb.hp < sb.def.hp, passengers: sb.passengers.length } : null,
       placing: !!this.placing && this.lastPointerTouch,
     });
     this.hud.setPlacing(!!this.placing, this.lastPointerTouch);
@@ -853,7 +911,16 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       const queue = p.queues[category].filter((q) => q.defId === def.id);
       const head = p.queues[category][0];
       const isHead = head?.defId === def.id;
-      const producerNames = category === 'building' || category === 'defense' ? ['constructionYard'] : category === 'infantry' ? ['barracks'] : ['factory'];
+      const producerNames =
+        category === 'building' || category === 'defense'
+          ? ['constructionYard']
+          : category === 'infantry'
+            ? ['barracks']
+            : category === 'air'
+              ? ['airfield']
+              : category === 'naval'
+                ? ['shipyard']
+                : ['factory'];
       out.push({
         id: def.id,
         category,
@@ -869,7 +936,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       });
     };
     for (const b of this.rules.buildingsOf(p.faction)) add(b, b.category);
-    for (const u of this.rules.unitsOf(p.faction)) if (u.category === 'infantry' || u.category === 'vehicle') add(u, u.category);
+    for (const u of this.rules.unitsOf(p.faction)) add(u, u.category);
     return out;
   }
 
@@ -1064,13 +1131,29 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const enemyUnit = this.pickUnit(sx, sy, touch, (u) => this.sim.isEnemy(this.local, u.owner));
     const enemyBuilding = enemyUnit ? null : this.pickBuilding(sx, sy, (b) => this.sim.isEnemy(this.local, b.owner));
     const ownBuilding = this.pickBuilding(sx, sy, (b) => b.owner === this.local);
+    const carrier = this.carrierAt(sx, sy, touch, units);
+    const neutral = enemyUnit || enemyBuilding ? null : this.pickBuilding(sx, sy, (b) => b.owner === 0);
     const rest: Unit[] = [];
     const fighters = units.filter((u) => u.def.weapon);
     const harvesters = units.filter((u) => u.def.harvestCapacity);
     const engineers = units.filter((u) => u.def.engineer);
     let markerColor = 0x9dff5c;
 
-    if (enemyUnit || enemyBuilding) {
+    if (carrier) {
+      // Einsteigen in eigenen Transporter oder Bunker
+      const boarders = units.filter((u) => this.sim.canBoard(u, carrier));
+      issue({ type: 'enter', units: ids(boarders), target: carrier.id });
+      rest.push(...units.filter((u) => !boarders.includes(u) && u !== carrier));
+    } else if (neutral && engineers.length) {
+      // Ingenieur übernimmt eine Glimmerit-Quelle
+      issue({ type: 'enter', units: ids(engineers), target: neutral.id });
+      rest.push(...units.filter((u) => !u.def.engineer));
+    } else if (ownBuilding && ownBuilding.def.repairsVehicles && units.some((u) => u.def.category === 'vehicle')) {
+      // Fahrzeuge zur Reparaturstation: daneben parken (unten), dort wird repariert
+      const vx = pxToUnits((ownBuilding.tx + ownBuilding.def.width / 2) * TILE_PX);
+      const vy = pxToUnits((ownBuilding.ty + ownBuilding.def.height + 0.5) * TILE_PX);
+      issue({ type: 'move', units: ids(units), x: vx, y: vy });
+    } else if (enemyUnit || enemyBuilding) {
       const target = (enemyUnit ?? enemyBuilding)!;
       if (fighters.length) issue({ type: 'attack', units: ids(fighters), target: target.id });
       if (enemyBuilding && engineers.length) issue({ type: 'enter', units: ids(engineers), target: target.id });
@@ -1096,6 +1179,14 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     }
     if (rest.length) issue({ type: 'move', units: ids(rest), x, y });
     this.markers.push({ x: p.x, y: p.y, age: 0, color: markerColor });
+  }
+
+  /** Eigener Transporter/Bunker unter dem Punkt, in den mindestens eine ausgewählte Einheit einsteigen kann. */
+  private carrierAt(sx: number, sy: number, touch: boolean, units: Unit[]): Unit | Building | null {
+    const canAny = (c: Unit | Building) => units.some((u) => this.sim.canBoard(u, c));
+    const cu = this.pickUnit(sx, sy, touch, (u) => u.owner === this.local && !!u.def.transport && !this.selection.has(u.id) && canAny(u));
+    if (cu) return cu;
+    return this.pickBuilding(sx, sy, (b) => b.owner === this.local && b.def.garrison > 0 && canAny(b));
   }
 
   leftClick(sx: number, sy: number, shift: boolean): void {
@@ -1152,16 +1243,22 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       return;
     }
     const units = this.selectedUnits();
+    // Tippen auf eigenen Transporter/Bunker mit passender Auswahl → einsteigen
+    if (units.length > 0 && this.carrierAt(sx, sy, true, units)) {
+      this.commandAt(sx, sy, true);
+      return;
+    }
     const ownUnit = this.pickUnit(sx, sy, true, (u) => u.owner === this.local);
     if (ownUnit) {
       this.selectUnitsOnly([ownUnit.id]);
       return;
     }
     const ownBuilding = this.pickBuilding(sx, sy, (b) => b.owner === this.local);
-    // Gebäude als Ziel eines Kontextbefehls (Sammler → Raffinerie, Ingenieur → Reparatur)?
+    // Gebäude als Ziel eines Kontextbefehls (Sammler → Raffinerie, Ingenieur → Reparatur, Fahrzeug → Reparaturstation)?
     const contextual =
       ownBuilding &&
       ((ownBuilding.def.refinery && units.some((u) => u.def.harvestCapacity)) ||
+        (ownBuilding.def.repairsVehicles && units.some((u) => u.def.category === 'vehicle')) ||
         (ownBuilding.hp < ownBuilding.def.hp && units.some((u) => u.def.engineer)));
     if (ownBuilding && !contextual) {
       this.selectAt(sx, sy, false, true);
@@ -1253,6 +1350,13 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   deploy(): void {
     const wagons = this.selectedUnits().filter((u) => u.def.deploysTo);
     if (wagons.length) this.issue({ type: 'deploy', units: wagons.map((u) => u.id) });
+  }
+
+  unload(): void {
+    const carriers = this.selectedUnits().filter((u) => u.passengers.length > 0);
+    if (carriers.length) this.issue({ type: 'unload', units: carriers.map((u) => u.id) });
+    else if (this.selectedBuilding) this.issue({ type: 'evacuate', building: this.selectedBuilding });
+    this.time.delayedCall(150, () => this.updateHud());
   }
 
   sellSelected(): void {

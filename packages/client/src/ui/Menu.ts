@@ -28,10 +28,12 @@ export interface GameConfig {
   /** Nur im Mehrspieler: Verbindung und Startinfo vom Server. */
   net?: NetSession;
   speed?: number;
+  /** Neutrale Glimmerit-Quellen (Standard: an). */
+  bonusPoints?: boolean;
 }
 
-/** In dieser Etappe spielbare KI-Stufen. */
-const ENABLED_AI: AiLevel[] = ['easy'];
+/** Spielbare KI-Stufen. */
+const ENABLED_AI: AiLevel[] = ['easy', 'medium', 'hard'];
 const NAME_KEY = 'fftr.name';
 
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
@@ -209,8 +211,8 @@ export class Menu {
           <label><span data-i18n="skirmish.startCredits"></span>
             <select id="credits-select">${START_CREDITS.map((c) => `<option value="${c}" ${cfg.startCredits === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
           </label>
-          <label class="disabled"><span data-i18n="skirmish.bonusPoints"></span>
-            <select disabled><option>${t('menu.comingSoon', { n: 4 })}</option></select>
+          <label><span data-i18n="skirmish.bonusPoints"></span>
+            <select id="bonus-select">${this.onOffOptions(cfg.bonusPoints ?? true)}</select>
           </label>
         </div>
         <h3 data-i18n="skirmish.players"></h3>
@@ -235,6 +237,9 @@ export class Menu {
     });
     this.root.querySelector<HTMLSelectElement>('#credits-select')!.addEventListener('change', (e) => {
       cfg.startCredits = Number((e.target as HTMLSelectElement).value);
+    });
+    this.root.querySelector<HTMLSelectElement>('#bonus-select')!.addEventListener('change', (e) => {
+      cfg.bonusPoints = (e.target as HTMLSelectElement).value === 'on';
     });
     this.root.querySelector('#add-ai')?.addEventListener('click', () => {
       const used = new Set(cfg.slots.map((s) => s.color));
@@ -287,6 +292,10 @@ export class Menu {
     return `<select data-field="team" aria-label="${t('skirmish.team')}" ${disabled ? 'disabled' : ''}>${[0, 1, 2]
       .map((tm) => `<option value="${tm}" ${value === tm ? 'selected' : ''}>${tm === 0 ? t('skirmish.noTeam') : `${t('skirmish.team')} ${tm}`}</option>`)
       .join('')}</select>`;
+  }
+
+  private onOffOptions(on: boolean): string {
+    return `<option value="on" ${on ? 'selected' : ''}>${t('menu.on')}</option><option value="off" ${on ? '' : 'selected'}>${t('menu.off')}</option>`;
   }
 
   private aiSelect(value: AiLevel, disabled = false): string {
@@ -476,6 +485,9 @@ export class Menu {
           <label><span data-i18n="lobby.speed"></span>
             <select id="lb-speed" ${hostSel}>${GAME_SPEEDS.map((v) => `<option value="${v}" ${lobby.speed === v ? 'selected' : ''}>${v}×</option>`).join('')}</select>
           </label>
+          <label><span data-i18n="skirmish.bonusPoints"></span>
+            <select id="lb-bonus" ${hostSel}>${this.onOffOptions(lobby.bonusPoints ?? true)}</select>
+          </label>
         </div>
         <h3 data-i18n="skirmish.players"></h3>
         <div class="slots">${lobby.slots.map(row).join('')}</div>
@@ -518,6 +530,7 @@ export class Menu {
     onChange('#lb-mode', (v) => send('settings', { mode: v }));
     onChange('#lb-credits', (v) => send('settings', { startCredits: Number(v) }));
     onChange('#lb-speed', (v) => send('settings', { speed: Number(v) }));
+    onChange('#lb-bonus', (v) => send('settings', { bonusPoints: v === 'on' }));
     this.root.querySelectorAll<HTMLSelectElement>('[data-kind]').forEach((sel) =>
       sel.addEventListener('change', () => send('slot', { slot: Number(sel.dataset.kind), kind: sel.value, ai: 'easy' })),
     );

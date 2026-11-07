@@ -215,5 +215,47 @@
   "pause.mpTitle": "Menu",
   "pause.mpHint": "In multiplayer the game keeps running.",
   "pause.back": "Back to the game",
-  "pause.leave": "Leave game (AI takes over)"
+  "pause.leave": "Leave game (AI takes over)",
+
+  "map.zweiUfer.name": "Two Shores",
+  "map.zwei-ufer.desc": "2 players · A river with bridges, ships pay off",
+  "map.archipel.name": "Archipelago",
+  "map.archipel.desc": "4 players · Islands – reachable only by air, ships and transports",
+
+  "menu.on": "On",
+  "menu.off": "Off",
+
+  "tab.air": "Air",
+  "tab.naval": "Sea",
+
+  "unit.gunship": "Gunship",
+  "unit.transportHeli": "Transport helicopter",
+  "unit.patrolBoat": "Patrol boat",
+  "unit.transportBoat": "Landing boat",
+  "unit.jetpackRanger": "Jetpack scout",
+  "unit.hoverTank": "Hover tank",
+  "unit.cometFighter": "Comet fighter",
+  "unit.radarZeppelin": "Radar zeppelin",
+  "unit.missileBoat": "Missile boat",
+  "unit.shieldBearer": "Shield bearer",
+  "unit.colossus": "Colossus",
+  "unit.mole": "Mole driller",
+  "unit.bomberAirship": "Bomber airship",
+  "unit.steamCruiser": "Steam cruiser",
+
+  "building.airfield": "Airfield",
+  "building.shipyard": "Shipyard",
+  "building.repairStation": "Repair station",
+  "building.techCenter": "Tech center",
+  "building.flakPosition": "Flak position",
+  "building.rocketBattery": "Rocket battery",
+  "building.bunker": "Bunker",
+  "building.glimmerSource": "Glimmerite source",
+
+  "cmd.unload": "Unload passengers",
+  "cmd.evacuate": "Empty bunker",
+  "msg.cannotUnload": "Passengers can't get out here – move closer to land!",
+  "msg.noWater": "The shipyard must be built by the water.",
+  "help.mouse.transport": "Select units, right-click your own transport/bunker: board",
+  "help.touch.transport": "Select units, tap your own transport/bunker: board"
 }

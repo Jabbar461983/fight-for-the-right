@@ -215,5 +215,47 @@
   "pause.mpTitle": "Menü",
   "pause.mpHint": "Im Mehrspieler läuft das Spiel weiter.",
   "pause.back": "Zurück zum Spiel",
-  "pause.leave": "Spiel verlassen (KI übernimmt)"
+  "pause.leave": "Spiel verlassen (KI übernimmt)",
+
+  "map.zweiUfer.name": "Zwei Ufer",
+  "map.zwei-ufer.desc": "2 Spieler · Ein Fluss mit Brücken, Schiffe lohnen sich",
+  "map.archipel.name": "Archipel",
+  "map.archipel.desc": "4 Spieler · Inseln – nur mit Luft, Schiffen und Transportern zu erobern",
+
+  "menu.on": "An",
+  "menu.off": "Aus",
+
+  "tab.air": "Luft",
+  "tab.naval": "See",
+
+  "unit.gunship": "Kampfhubschrauber",
+  "unit.transportHeli": "Transporthubschrauber",
+  "unit.patrolBoat": "Patrouillenboot",
+  "unit.transportBoat": "Landungsboot",
+  "unit.jetpackRanger": "Düsenrucksack-Späher",
+  "unit.hoverTank": "Schwebepanzer",
+  "unit.cometFighter": "Komet-Jäger",
+  "unit.radarZeppelin": "Radar-Zeppelin",
+  "unit.missileBoat": "Raketenboot",
+  "unit.shieldBearer": "Schildträger",
+  "unit.colossus": "Koloss",
+  "unit.mole": "Maulwurf-Bohrer",
+  "unit.bomberAirship": "Bomben-Luftschiff",
+  "unit.steamCruiser": "Dampfkreuzer",
+
+  "building.airfield": "Flugfeld",
+  "building.shipyard": "Werft",
+  "building.repairStation": "Reparaturstation",
+  "building.techCenter": "Technikzentrum",
+  "building.flakPosition": "Flak-Stellung",
+  "building.rocketBattery": "Raketenbatterie",
+  "building.bunker": "Bunker",
+  "building.glimmerSource": "Glimmerit-Quelle",
+
+  "cmd.unload": "Aussteigen lassen",
+  "cmd.evacuate": "Bunker räumen",
+  "msg.cannotUnload": "Hier können die Passagiere nicht aussteigen – näher ans Land!",
+  "msg.noWater": "Die Werft muss am Wasser stehen.",
+  "help.mouse.transport": "Einheiten wählen, Rechtsklick auf eigenen Transporter/Bunker: einsteigen",
+  "help.touch.transport": "Einheiten wählen, auf eigenen Transporter/Bunker tippen: einsteigen"
 }

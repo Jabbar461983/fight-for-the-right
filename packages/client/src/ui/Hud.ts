@@ -7,8 +7,8 @@ import { applyI18n, getLang, onLangChange, setLang, t, type Lang } from '../i18n
  * Befehlsleiste mit grossen Touch-Knöpfen; Meldungen; Pause- und Endbildschirm.
  */
 
-export type BuildTab = 'building' | 'defense' | 'infantry' | 'vehicle';
-export const BUILD_TABS: BuildTab[] = ['building', 'defense', 'infantry', 'vehicle'];
+export type BuildTab = 'building' | 'defense' | 'infantry' | 'vehicle' | 'air' | 'naval';
+export const BUILD_TABS: BuildTab[] = ['building', 'defense', 'infantry', 'vehicle', 'air', 'naval'];
 
 export interface BuildItemState {
   id: string;
@@ -31,8 +31,10 @@ export interface CommandState {
   armed: boolean;
   stance: Stance | null;
   canDeploy: boolean;
+  /** Ausgewählter Transporter hat Passagiere. */
+  canUnload: boolean;
   /** Ausgewähltes eigenes Gebäude. */
-  building: { repairing: boolean; damaged: boolean } | null;
+  building: { repairing: boolean; damaged: boolean; passengers: number } | null;
   placing: boolean;
 }
 
@@ -45,6 +47,8 @@ export interface HudActions {
   armAttack(): void;
   cycleStance(): void;
   deploy(): void;
+  /** Transporter entladen bzw. Bunker räumen. */
+  unload(): void;
   sellSelected(): void;
   repairSelected(): void;
   confirmPlacement(): void;
@@ -67,6 +71,7 @@ const ICONS = {
   hold: '<svg viewBox="0 0 24 24" class="line"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>',
   passive: '<svg viewBox="0 0 24 24" class="line"><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/></svg>',
   deploy: '<svg viewBox="0 0 24 24" class="line"><path d="M4 20h16M6 20V10l6-5 6 5v10M10 20v-6h4v6"/></svg>',
+  unload: '<svg viewBox="0 0 24 24" class="line"><path d="M4 8h12v8H4zM16 11h3l2 3v2h-5M12 20l3 3M12 20h7M8 4v4"/><circle cx="8" cy="18" r="1.5"/></svg>',
   sell: '<svg viewBox="0 0 24 24" class="line"><circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.9 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5v11"/></svg>',
   repair: '<svg viewBox="0 0 24 24" class="line"><path d="M14 6a4 4 0 0 0 5 5l-8 8a2.1 2.1 0 0 1-3-3l8-8a4 4 0 0 0-2-2z"/></svg>',
   ok: '<svg viewBox="0 0 24 24" class="line"><path d="M5 12l5 5 9-10"/></svg>',
@@ -204,9 +209,9 @@ export class Hud {
         <details class="panel help">
           <summary data-i18n="help.title"></summary>
           <h3 data-i18n="help.mouse"></h3>
-          <ul>${[1, 2, 3, 4, 5, 6].map((i) => `<li data-i18n="help.mouse.${i}"></li>`).join('')}</ul>
+          <ul>${[1, 2, 3, 4, 5, 6, 'transport'].map((i) => `<li data-i18n="help.mouse.${i}"></li>`).join('')}</ul>
           <h3 data-i18n="help.touch"></h3>
-          <ul>${[1, 2, 3, 4, 5, 6].map((i) => `<li data-i18n="help.touch.${i}"></li>`).join('')}</ul>
+          <ul>${[1, 2, 3, 4, 5, 6, 'transport'].map((i) => `<li data-i18n="help.touch.${i}"></li>`).join('')}</ul>
         </details>
         <section class="panel row">
           <span data-i18n="ui.language"></span>
@@ -379,6 +384,7 @@ export class Hud {
       html =
         btn('sell', ICONS.sell, this.sellArmed ? t('cmd.sellConfirm') : t('cmd.sell'), this.sellArmed ? 'class="warn"' : '') +
         btn('repair', ICONS.repair, t('cmd.repair'), `${s.building.damaged ? '' : 'disabled'} ${s.building.repairing ? 'class="on"' : ''}`) +
+        (s.building.passengers > 0 ? btn('unload', ICONS.unload, t('cmd.evacuate'), 'class="ok"') : '') +
         btn('deselect', ICONS.cancel, t('cmd.deselect'));
     } else {
       const stanceIcon = s.stance ? ICONS[s.stance] : ICONS.aggressive;
@@ -387,6 +393,7 @@ export class Hud {
         btn('attack', ICONS.attack, t('cmd.attackMove'), `${s.hasUnits ? '' : 'disabled'} ${s.armed ? 'class="on"' : ''}`) +
         btn('stance', stanceIcon, s.stance ? t(`stance.${s.stance}`) : t('cmd.stance'), s.stance ? '' : 'disabled') +
         (s.canDeploy ? btn('deploy', ICONS.deploy, t('cmd.deploy'), 'class="ok"') : '') +
+        (s.canUnload ? btn('unload', ICONS.unload, t('cmd.unload'), 'class="ok"') : '') +
         [1, 2, 3, 4]
           .map((n) => `<button type="button" class="group" data-group="${n}" title="${t('cmd.group', { n })}">${n}<span class="badge" hidden></span></button>`)
           .join('') +
@@ -399,6 +406,7 @@ export class Hud {
     on('attack', () => this.actions.armAttack());
     on('stance', () => this.actions.cycleStance());
     on('deploy', () => this.actions.deploy());
+    on('unload', () => this.actions.unload());
     on('deselect', () => this.actions.clearSelection());
     on('placeOk', () => this.actions.confirmPlacement());
     on('placeCancel', () => this.actions.cancelPlacement());
