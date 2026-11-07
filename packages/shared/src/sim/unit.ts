@@ -39,7 +39,11 @@ export type Task =
   | { kind: 'attackMove'; x: number; y: number }
   | { kind: 'harvest'; phase: HarvestPhase; fieldIdx: number; refineryId: number; timer: number }
   | { kind: 'enter'; targetId: number; nextRepath: number }
-  | { kind: 'deploy'; tries: number };
+  | { kind: 'deploy'; tries: number }
+  /** Transporter fährt hin und lässt dort alle aussteigen. */
+  | { kind: 'unload'; x: number; y: number }
+  /** Jet fliegt zum Flugfeld und munitioniert auf. */
+  | { kind: 'rearm'; airfieldId: number; timer: number };
 
 /** Eine Einheit in der Simulation. Alle Werte ganzzahlig. */
 export interface Unit {
@@ -67,6 +71,12 @@ export interface Unit {
   targetId: number;
   /** Ladung eines Sammlers. */
   cargo: number;
+  /** Mitfahrende Einheiten (ids; sie sind solange nicht auf der Karte). */
+  passengers: number[];
+  /** Verbleibende Schüsse (Jets), -1 = unbegrenzt. */
+  ammo: number;
+  /** Eingegraben (Maulwurf in Fahrt) – für Gegner unsichtbar und unangreifbar. */
+  burrowed: boolean;
   /** Wird am Tick-Ende entfernt. */
   dead: boolean;
 }
@@ -89,6 +99,8 @@ export interface Building {
   repairing: boolean;
   /** Sammler, der gerade an der Raffinerie entlädt (0 = frei). */
   dockedBy: number;
+  /** Infanterie im Bunker (ids). */
+  passengers: number[];
   dead: boolean;
 }
 

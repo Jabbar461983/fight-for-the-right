@@ -155,8 +155,18 @@ function spawnProduced(sim: Simulation, p: Player, producers: Building[], defId:
   const tile = sim.map.nearestPassable(ex.tx, ex.ty, def.moveClassId);
   if (!tile) return null;
   const u = sim.spawnUnit(defId, p.id, tileCenter(tile.tx), tileCenter(tile.ty));
+  // Fertig beladen ausliefern (z.B. Maulwurf mit Schützen)
+  if (def.initialPassengers) {
+    for (let i = 0; i < def.initialPassengers.count; i++) {
+      const passenger = sim.spawnUnit(def.initialPassengers.type, p.id, u.x, u.y);
+      if (sim.canBoard(passenger, u)) sim.board(passenger, u);
+    }
+  }
   // Ein Stück vom Tor wegfahren, damit der Ausgang frei bleibt (Sammler fahren direkt los).
-  if (!def.harvestCapacity) sim.movement.moveOne(u, u.x, u.y + 2 * TILE);
+  if (!def.harvestCapacity) {
+    const dir = def.moveClassId === MoveClass.Naval ? 0 : 2 * TILE;
+    if (dir) sim.movement.moveOne(u, u.x, u.y + dir);
+  }
   return u;
 }
 
@@ -174,7 +184,7 @@ export interface PlaceCheck {
   ok: boolean;
   /** Je Kachel des Grundrisses: frei? (für die grün/rote Anzeige) */
   tiles: boolean[];
-  reason?: 'blocked' | 'tooFar' | 'bounds';
+  reason?: 'blocked' | 'tooFar' | 'bounds' | 'noWater';
 }
 
 /**
@@ -214,6 +224,20 @@ export function canPlace(sim: Simulation, player: number, def: BuildingDef, tx: 
   if (!m.inBounds(tx, ty) || !m.inBounds(tx + def.width - 1, ty + def.height - 1)) {
     return { ok: false, tiles, reason: 'bounds' };
   }
+  // Werft muss direkt am Wasser stehen
+  if (def.requiresWater) {
+    let water = false;
+    for (let y = ty - 1; y <= ty + def.height && !water; y++) {
+      for (let x = tx - 1; x <= tx + def.width; x++) {
+        const inside = x >= tx && x < tx + def.width && y >= ty && y < ty + def.height;
+        if (!inside && m.inBounds(x, y) && m.passable(x, y, MoveClass.Naval)) {
+          water = true;
+          break;
+        }
+      }
+    }
+    if (!water) return { ok: false, tiles: tiles.map(() => false), reason: 'noWater' };
+  }
   // Raffinerie braucht einen freien Andockplatz
   if (def.refinery) {
     const dx = tx + Math.floor(def.width / 2);
@@ -223,7 +247,7 @@ export function canPlace(sim: Simulation, player: number, def: BuildingDef, tx: 
   if (!allFree) return { ok: false, tiles, reason: 'blocked' };
   // Nähe zu eigenen Gebäuden (Mauern zählen nicht)
   const near = sim.buildings.some((b) => {
-    if (b.dead || b.owner !== player || b.def.wall) return false;
+    if (b.dead || b.owner !== player || b.def.wall || b.def.neutral) return false;
     const gapX = Math.max(b.tx - (tx + def.width), tx - (b.tx + b.def.width), 0);
     const gapY = Math.max(b.ty - (ty + def.height), ty - (b.ty + b.def.height), 0);
     return Math.max(gapX, gapY) <= BUILD_GAP;
@@ -270,9 +294,42 @@ export function recomputePower(sim: Simulation): void {
   }
 }
 
+/** Bonus-Punkte bringen alle 2 Sekunden Glimmerit (bis zur Lagergrenze). */
+function updateIncome(sim: Simulation): void {
+  if (sim.tick % 30 !== 0) return;
+  for (const b of sim.buildings) {
+    if (b.dead || !b.def.income || !b.owner) continue;
+    const p = sim.players[b.owner];
+    if (!p || p.defeated) continue;
+    const add = Math.max(0, Math.min(b.def.income, p.storage - p.credits));
+    p.credits += add;
+    p.stats.harvested += add;
+  }
+}
+
+/** Reparaturstation: Fahrzeuge daneben heilen 2 % alle 5 Ticks (halber anteiliger Preis). */
+function updateRepairStations(sim: Simulation): void {
+  for (const st of sim.buildings) {
+    if (st.dead || !st.def.repairsVehicles) continue;
+    const p = sim.players[st.owner];
+    if (!p) continue;
+    for (const u of sim.units) {
+      if (u.dead || u.owner !== st.owner || u.def.category !== 'vehicle' || u.order || u.hp >= u.def.hp) continue;
+      if (sim.distanceTo(u.x, u.y, st) > TILE + u.def.radiusUnits) continue;
+      const heal = Math.min(Math.max(1, Math.ceil(u.def.hp / 50)), u.def.hp - u.hp);
+      const cost = Math.max(1, Math.ceil((u.def.cost * heal) / u.def.hp / 2));
+      if (p.credits < cost) continue;
+      p.credits -= cost;
+      u.hp += heal;
+    }
+  }
+}
+
 /** Reparatur: 1 % der Trefferpunkte alle 5 Ticks, kostet die Hälfte des anteiligen Preises. */
 export function updateRepairs(sim: Simulation): void {
+  updateIncome(sim);
   if (sim.tick % 5 !== 0) return;
+  updateRepairStations(sim);
   for (const b of sim.buildings) {
     if (!b.repairing || b.dead) continue;
     const p = sim.players[b.owner];

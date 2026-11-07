@@ -174,9 +174,15 @@ export class SnapshotEncoder {
     const seenUnits = new Set<number>();
     for (const x of sim.units) {
       if (x.dead) continue;
-      if (!sim.isAlly(me, x.owner) && !sim.isVisible(me, tileOf(x.x), tileOf(x.y))) continue;
+      if (!sim.canSee(me, x)) continue;
       seenUnits.add(x.id);
-      const flags = (x.targetId !== 0 || x.task?.kind === 'attack' ? 1 : 0) | (x.order ? 2 : 0) | (STANCES.indexOf(x.stance) << 2);
+      const flags =
+        (x.targetId !== 0 || x.task?.kind === 'attack' ? 1 : 0) |
+        (x.order ? 2 : 0) |
+        (STANCES.indexOf(x.stance) << 2) |
+        (x.burrowed ? 16 : 0) |
+        (x.ammo === 0 ? 32 : 0);
+      const ally = sim.isAlly(me, x.owner);
       const tuple: UnitTuple = [
         x.id,
         this.index.units.indexOf(x.def.id),
@@ -187,7 +193,8 @@ export class SnapshotEncoder {
         angleByte(x.aimX, x.aimY),
         x.hp,
         flags,
-        sim.isAlly(me, x.owner) ? x.cargo : 0,
+        // Ladung: Sammler-Glimmerit bzw. Anzahl Mitfahrer (nur für Verbündete)
+        ally ? (x.def.transport ? x.passengers.length : x.cargo) : 0,
       ];
       if (!sameTuple(this.units.get(x.id), tuple)) {
         u.push(tuple);
@@ -219,7 +226,7 @@ export class SnapshotEncoder {
         x.ty,
         x.hp,
         angleByte(x.aimX, x.aimY),
-        (x.repairing ? 1 : 0) | (x.targetId ? 2 : 0),
+        (x.repairing ? 1 : 0) | (x.targetId ? 2 : 0) | (x.passengers.length << 2),
       ];
       if (!sameTuple(this.buildings.get(x.id), tuple)) {
         b.push(tuple);
@@ -358,7 +365,10 @@ export function applySnapshot(sim: Simulation, snap: Snapshot, index: NetIndex, 
       existing.hp = hp;
       existing.targetId = flags & 1 ? -1 : 0;
       existing.stance = STANCES[(flags >> 2) & 3] ?? 'aggressive';
-      existing.cargo = cargo;
+      existing.burrowed = (flags & 16) !== 0;
+      existing.ammo = flags & 32 ? 0 : -1;
+      existing.cargo = def.transport ? 0 : cargo;
+      existing.passengers = def.transport ? new Array(cargo).fill(0) : [];
       existing.owner = owner;
       continue;
     }
@@ -380,7 +390,10 @@ export function applySnapshot(sim: Simulation, snap: Snapshot, index: NetIndex, 
       stance: STANCES[(flags >> 2) & 3] ?? 'aggressive',
       cooldown: 0,
       targetId: flags & 1 ? -1 : 0,
-      cargo,
+      cargo: def.transport ? 0 : cargo,
+      passengers: def.transport ? new Array(cargo).fill(0) : [],
+      ammo: flags & 32 ? 0 : -1,
+      burrowed: (flags & 16) !== 0,
       dead: false,
     };
     sim.mirrorPutUnit(unit);
@@ -400,6 +413,7 @@ export function applySnapshot(sim: Simulation, snap: Snapshot, index: NetIndex, 
       existing.aimY = aimY;
       existing.repairing = (flags & 1) !== 0;
       existing.targetId = flags & 2 ? -1 : 0;
+      existing.passengers = new Array(flags >> 2).fill(0);
       continue;
     }
     const b: Building = {
@@ -417,6 +431,7 @@ export function applySnapshot(sim: Simulation, snap: Snapshot, index: NetIndex, 
       aimY,
       repairing: (flags & 1) !== 0,
       dockedBy: 0,
+      passengers: new Array(flags >> 2).fill(0),
       dead: false,
     };
     sim.mirrorPutBuilding(b);

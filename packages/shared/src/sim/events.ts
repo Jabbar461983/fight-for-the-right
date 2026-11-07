@@ -18,6 +18,10 @@ export type SimEvent =
   | { type: 'insufficientFunds'; owner: number }
   | { type: 'captured'; id: number; owner: number; previousOwner: number }
   | { type: 'cannotDeploy'; owner: number; x: number; y: number }
+  | { type: 'cannotUnload'; owner: number; x: number; y: number }
+  | { type: 'boarded'; owner: number; carrierId: number }
+  | { type: 'unloaded'; owner: number; carrierId: number; x: number; y: number }
+  | { type: 'surfaced'; owner: number; id: number; x: number; y: number }
   | { type: 'fired'; sourceId: number; owner: number; x: number; y: number; weaponId: string }
   | { type: 'impact'; x: number; y: number; weaponId: string; splash: number }
   | { type: 'playerDefeated'; owner: number }

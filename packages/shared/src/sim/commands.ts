@@ -26,8 +26,12 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('harvest'), units: Ids, tx: TileCoord, ty: TileCoord }),
   /** Sammler zu einer bestimmten Raffinerie schicken. */
   z.object({ type: z.literal('dock'), units: Ids, target: Id }),
-  /** Ingenieur betritt ein Gebäude (übernehmen bzw. reparieren). */
+  /** Betreten: Ingenieur (übernehmen/reparieren), Einsteigen in Transporter oder Bunker. */
   z.object({ type: z.literal('enter'), units: Ids, target: Id }),
+  /** Transporter: hinfahren (optional) und alle aussteigen lassen. */
+  z.object({ type: z.literal('unload'), units: Ids, x: Coord.optional(), y: Coord.optional() }),
+  /** Bunker räumen. */
+  z.object({ type: z.literal('evacuate'), building: Id }),
   /** Bauwagen ausfahren. */
   z.object({ type: z.literal('deploy'), units: Ids }),
   z.object({

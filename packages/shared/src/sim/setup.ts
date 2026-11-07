@@ -21,6 +21,8 @@ export interface SkirmishSetup {
   rules: Rules;
   slots: SlotSetup[];
   startCredits: number;
+  /** Bonus-Punkte (Glimmerit-Quellen) auf der Karte aktivieren. */
+  bonusPoints?: boolean;
 }
 
 /**
@@ -50,7 +52,19 @@ export function createSkirmish(setup: SkirmishSetup): Simulation {
     );
     if (slot.ai) sim.listeners.push(new SkirmishAi(slot.id, slot.ai, sim));
   });
+  if (setup.bonusPoints) placeBonusSources(sim);
   return sim;
+}
+
+/** Stellt die neutralen Glimmerit-Quellen der Karte auf (Objekte vom Typ «bonusSource»). */
+export function placeBonusSources(sim: Simulation): void {
+  const def = sim.rules.building('aero', 'glimmerSource');
+  if (!def) return;
+  for (const o of sim.map.objectsOfKind('bonusSource')) {
+    const tx = tileOf(o.x) - Math.floor(def.width / 2);
+    const ty = tileOf(o.y) - Math.floor(def.height / 2);
+    sim.addBuilding(def, 0, tx, ty);
+  }
 }
 
 /** Startplatz (Weltkoordinaten) eines Spielers. */

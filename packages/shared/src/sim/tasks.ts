@@ -35,9 +35,56 @@ export function updateTasks(sim: Simulation): void {
       case 'deploy':
         deploy(sim, u);
         break;
+      case 'unload': {
+        const dx = t.x - u.x;
+        const dy = t.y - u.y;
+        if (!u.order || dx * dx + dy * dy <= TILE * TILE) {
+          u.order = null;
+          u.task = null;
+          sim.unloadAll(u);
+        }
+        break;
+      }
+      case 'rearm':
+        updateRearm(sim, u);
+        break;
       case 'harvest':
         break; // → Economy
     }
+  }
+}
+
+/** Jet ohne Munition: zum nächsten eigenen Flugfeld, dort kurz warten, dann voll. */
+function updateRearm(sim: Simulation, u: Unit): void {
+  const t = u.task;
+  if (!t || t.kind !== 'rearm') return;
+  let field = t.airfieldId ? sim.getBuilding(t.airfieldId) : undefined;
+  if (!field || field.owner !== u.owner) {
+    let best: typeof field;
+    let bestD = Infinity;
+    for (const b of sim.buildings) {
+      if (b.dead || b.owner !== u.owner || !b.def.airfield) continue;
+      const d = (b.x - u.x) ** 2 + (b.y - u.y) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = b;
+      }
+    }
+    field = best;
+    t.airfieldId = field?.id ?? 0;
+    if (field) sim.movement.moveOne(u, field.x, field.y);
+  }
+  // Ohne Flugfeld dauert es länger (Nachschub per Luftbrücke)
+  const close = field ? (u.x - field.x) ** 2 + (u.y - field.y) ** 2 <= (2 * TILE) ** 2 : true;
+  if (!close) {
+    if (!u.order && field) sim.movement.moveOne(u, field.x, field.y);
+    return;
+  }
+  u.order = null;
+  t.timer++;
+  if (t.timer >= (field ? 45 : 150)) {
+    u.ammo = u.def.ammo ?? -1;
+    u.task = null;
   }
 }
 
@@ -134,27 +181,39 @@ function updateAttackMove(sim: Simulation, u: Unit): void {
   }
 }
 
-/** Ingenieur: neben dem Gebäude angekommen → übernehmen (Gegner) oder reparieren (eigenes). */
+/**
+ * Betreten: Einsteigen in Transporter/Bunker, oder Ingenieur am Gebäude →
+ * übernehmen (gegnerisch/neutral) bzw. reparieren (eigenes).
+ */
 function updateEnter(sim: Simulation, u: Unit): void {
   const t = u.task;
   if (!t || t.kind !== 'enter') return;
-  const b = sim.getBuilding(t.targetId);
-  if (!b || b.dead) {
+  const target = sim.getTarget(t.targetId);
+  if (!target) {
     u.task = null;
     return;
   }
-  if (sim.distanceTo(u.x, u.y, b) <= TILE * 0.6 + u.def.radiusUnits) {
-    if (sim.isEnemy(u.owner, b.owner)) {
-      sim.captureBuilding(b, u.owner);
-    } else {
-      b.hp = b.def.hp;
+  const isB = 'tx' in target;
+  const reach = isB ? TILE * 0.6 + u.def.radiusUnits : u.def.radiusUnits + target.def.radiusUnits + TILE / 2;
+  if (sim.distanceTo(u.x, u.y, target) <= reach) {
+    if (sim.canBoard(u, target) && !(u.def.engineer && isB && target.hp < target.def.hp)) {
+      sim.board(u, target);
+      return;
     }
-    sim.removeUnitSilently(u);
+    if (isB && u.def.engineer) {
+      if (target.owner !== u.owner) sim.captureBuilding(target, u.owner);
+      else target.hp = target.def.hp;
+      sim.removeUnitSilently(u);
+      return;
+    }
+    u.task = null; // voll oder nicht mehr passend
+    u.order = null;
     return;
   }
+  // Transporter, die selbst fahren, kommen entgegen: wir planen öfter neu
   if (!u.order || sim.tick >= t.nextRepath) {
-    t.nextRepath = sim.tick + REPATH_TICKS * 2;
-    if (!sim.movement.moveOne(u, b.x, b.y)) u.task = null;
+    t.nextRepath = sim.tick + (isB ? REPATH_TICKS * 2 : REPATH_TICKS);
+    if (!sim.movement.moveOne(u, target.x, target.y)) u.task = null;
   }
 }
 

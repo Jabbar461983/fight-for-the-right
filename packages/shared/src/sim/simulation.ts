@@ -150,6 +150,7 @@ export class Simulation {
   /** Sieht der Spieler dieses Ziel (Einheit: ihre Kachel, Gebäude: irgendeine Kachel)? */
   canSee(player: number, t: Unit | Building): boolean {
     if (this.isAlly(player, t.owner)) return true;
+    if (!('tx' in t) && t.burrowed) return false; // eingegrabener Maulwurf
     if ('tx' in t) {
       for (let y = t.ty; y < t.ty + t.def.height; y++) {
         for (let x = t.tx; x < t.tx + t.def.width; x++) if (this.isVisible(player, x, y)) return true;
@@ -208,6 +209,9 @@ export class Simulation {
       cooldown: 0,
       targetId: 0,
       cargo: 0,
+      passengers: [],
+      ammo: def.ammo ?? -1,
+      burrowed: false,
       dead: false,
     };
     this.units.push(unit);
@@ -250,6 +254,7 @@ export class Simulation {
       aimY: TILE,
       repairing: false,
       dockedBy: 0,
+      passengers: [],
       dead: false,
     };
     this.buildings.push(b);
@@ -273,8 +278,10 @@ export class Simulation {
   /** Fügt Schaden zu. `attacker` = Spieler, der getroffen hat (für Statistik). */
   damage(t: Unit | Building, amount: number, attacker: number): void {
     if (t.dead) return;
-    t.hp -= Math.max(1, amount);
     const isBuilding = 'tx' in t;
+    if (isBuilding && (t as Building).def.invulnerable) return;
+    if (!isBuilding) amount = this.shielded(t as Unit, amount);
+    t.hp -= Math.max(1, amount);
     if (this.isEnemy(attacker, t.owner)) {
       this.notify(t.owner, 'underAttack', ATTACK_NOTIFY_TICKS, { type: 'underAttack', owner: t.owner, x: t.x, y: t.y });
     }
@@ -293,13 +300,99 @@ export class Simulation {
     }
   }
 
-  /** Entfernt eine Einheit (mit Ereignis für die Comic-Wolke). */
+  /** Schildträger in der Nähe halbieren den Schaden an eigener Infanterie. */
+  private shielded(u: Unit, amount: number): number {
+    if (u.def.category !== 'infantry' || u.def.shield) return amount;
+    let best = 0;
+    this.hash.forRadius(u.x, u.y, 2 * TILE, (i) => {
+      const s = this.units[i];
+      if (!s || s.dead || s.owner !== u.owner || !s.def.shield) return;
+      const r = Math.round(s.def.shield.radius * TILE);
+      const dx = s.x - u.x;
+      const dy = s.y - u.y;
+      if (dx * dx + dy * dy <= r * r) best = Math.max(best, s.def.shield.reduction);
+    });
+    return best > 0 ? Math.trunc(amount * (1 - best)) : amount;
+  }
+
+  /** Entfernt eine Einheit (mit Ereignis für die Comic-Wolke). Mitfahrer kommen mit raus. */
   killUnit(u: Unit): void {
     u.dead = true;
     u.order = null;
     u.task = null;
     for (const b of this.buildings) if (b.dockedBy === u.id) b.dockedBy = 0;
     this.emit({ type: 'unitDied', id: u.id, owner: u.owner, defId: u.def.id, x: u.x, y: u.y, category: u.def.category });
+    for (const id of u.passengers) {
+      const p = this.stored.get(id);
+      if (!p) continue;
+      this.stored.delete(id);
+      p.x = u.x;
+      p.y = u.y;
+      const owner = this.players[p.owner];
+      if (owner) owner.stats.unitsLost++;
+      this.emit({ type: 'unitDied', id: p.id, owner: p.owner, defId: p.def.id, x: u.x, y: u.y, category: p.def.category });
+    }
+    u.passengers = [];
+  }
+
+  // ───────────────────────────── Ein- und Aussteigen ─────────────────────────────
+
+  /** Einheiten in Transportern/Bunkern (nicht auf der Karte). */
+  readonly stored = new Map<number, Unit>();
+
+  /** Kann `u` in diesen Transporter bzw. Bunker einsteigen? */
+  canBoard(u: Unit, carrier: Unit | Building): boolean {
+    if (carrier.owner !== u.owner || carrier.dead || u === carrier) return false;
+    if ('tx' in carrier) {
+      return carrier.def.garrison > carrier.passengers.length && u.def.category === 'infantry' && !!u.def.weapon;
+    }
+    const t = carrier.def.transport;
+    if (!t || carrier.passengers.length >= t.capacity) return false;
+    const kind = u.def.category === 'infantry' ? 'infantry' : u.def.category === 'vehicle' ? 'vehicle' : null;
+    return !!kind && t.accepts.includes(kind) && !u.def.transport;
+  }
+
+  /** Lässt eine Einheit einsteigen (sie verschwindet von der Karte). */
+  board(u: Unit, carrier: Unit | Building): void {
+    u.order = null;
+    u.task = null;
+    u.targetId = 0;
+    u.dead = true; // aus den Listen entfernen (wird beim Aussteigen zurückgesetzt)
+    this.unitById.delete(u.id);
+    this.stored.set(u.id, u);
+    carrier.passengers.push(u.id);
+    this.emit({ type: 'boarded', owner: u.owner, carrierId: carrier.id });
+  }
+
+  /** Alle aussteigen lassen, auf freie Plätze rund um (x,y). false, wenn kein Land in der Nähe ist. */
+  unloadAll(carrier: Unit | Building): boolean {
+    if (carrier.passengers.length === 0) return true;
+    const passengers = carrier.passengers.map((id) => this.stored.get(id)).filter((p): p is Unit => !!p);
+    const anyVehicle = passengers.some((p) => p.def.category === 'vehicle');
+    const cls = anyVehicle ? MoveClass.Vehicle : MoveClass.Infantry;
+    const cx = tileOf(carrier.x);
+    const cy = tileOf(carrier.y);
+    const start = this.map.nearestPassable(cx, cy, cls);
+    if (!start || Math.max(Math.abs(start.tx - cx), Math.abs(start.ty - cy)) > 3) {
+      this.emit({ type: 'cannotUnload', owner: carrier.owner, x: carrier.x, y: carrier.y });
+      return false;
+    }
+    const slots = collectSlots(this.map, cls, start, passengers.length);
+    passengers.forEach((p, i) => {
+      const slot = slots[i] ?? start;
+      this.stored.delete(p.id);
+      p.dead = false;
+      p.x = p.prevX = tileCenter(slot.tx);
+      p.y = p.prevY = tileCenter(slot.ty);
+      p.order = null;
+      p.task = null;
+      this.unitById.set(p.id, p);
+      // Erst beim Aufräumen in die Liste einfügen (die Liste wird gerade womöglich durchlaufen)
+      this.pendingInsert.push(p);
+    });
+    carrier.passengers = [];
+    this.emit({ type: 'unloaded', owner: carrier.owner, carrierId: carrier.id, x: carrier.x, y: carrier.y });
+    return true;
   }
 
   /** Entfernt eine Einheit still (z.B. Ingenieur betritt Gebäude, Bauwagen fährt aus). */
@@ -312,6 +405,8 @@ export class Simulation {
   removeBuilding(b: Building, sold: boolean): void {
     b.dead = true;
     this.map.setBlocked(b.tx, b.ty, b.def.width, b.def.height, 0);
+    // Besatzung des Bunkers kommt heraus
+    if (b.passengers.length) this.unloadAll(b);
     if (sold) this.emit({ type: 'buildingSold', id: b.id, owner: b.owner });
     else
       this.emit({
@@ -327,11 +422,20 @@ export class Simulation {
     recomputePower(this);
   }
 
+  /** Ausgestiegene Einheiten, die beim nächsten Aufräumen in die Liste kommen. */
+  private pendingInsert: Unit[] = [];
+
   /** Tote Einheiten/Gebäude/Geschosse aus den Listen räumen. */
   private cleanup(): void {
     if (this.units.some((u) => u.dead)) {
-      for (const u of this.units) if (u.dead) this.unitById.delete(u.id);
+      for (const u of this.units) if (u.dead && this.unitById.get(u.id) === u && !this.stored.has(u.id)) this.unitById.delete(u.id);
       this.units = this.units.filter((u) => !u.dead);
+    }
+    if (this.pendingInsert.length) {
+      const present = new Set(this.units.map((u) => u.id));
+      for (const p of this.pendingInsert) if (!p.dead && !present.has(p.id)) this.units.push(p);
+      this.pendingInsert = [];
+      this.units.sort((a, b) => a.id - b.id);
     }
     if (this.buildings.some((b) => b.dead)) {
       for (const b of this.buildings) if (b.dead) this.buildingById.delete(b.id);
@@ -366,7 +470,7 @@ export class Simulation {
         if (!u || u.dead || u.owner !== player) return false;
       }
     }
-    if (cmd.type === 'sell' || cmd.type === 'repair') {
+    if (cmd.type === 'sell' || cmd.type === 'repair' || cmd.type === 'evacuate') {
       const b = this.buildingById.get(cmd.building);
       if (!b || b.dead || b.owner !== player) return false;
     }
@@ -449,13 +553,36 @@ export class Simulation {
         break;
       }
       case 'enter': {
-        const b = this.buildingById.get(cmd.target);
-        if (!b) break;
+        const target = this.getTarget(cmd.target);
+        if (!target) break;
         for (const u of this.ownUnits(player, cmd.units)) {
-          if (!u.def.engineer) continue;
-          u.task = { kind: 'enter', targetId: b.id, nextRepath: 0 };
+          const isB = 'tx' in target;
+          const engineerJob =
+            isB &&
+            u.def.engineer &&
+            (target.owner !== player ? !(target as Building).def.wall && (target.owner === 0 || this.isEnemy(player, target.owner)) : target.hp < target.def.hp);
+          if (!engineerJob && !this.canBoard(u, target)) continue;
+          u.task = { kind: 'enter', targetId: target.id, nextRepath: 0 };
           u.order = null;
         }
+        break;
+      }
+      case 'unload':
+        for (const u of this.ownUnits(player, cmd.units)) {
+          if (u.passengers.length === 0) continue;
+          if (cmd.x === undefined || cmd.y === undefined) {
+            u.order = null;
+            u.task = null;
+            this.unloadAll(u);
+          } else {
+            u.task = { kind: 'unload', x: cmd.x, y: cmd.y };
+            this.movement.moveOne(u, cmd.x, cmd.y);
+          }
+        }
+        break;
+      case 'evacuate': {
+        const b = this.buildingById.get(cmd.building);
+        if (b && !b.dead && b.owner === player) this.unloadAll(b);
         break;
       }
       case 'deploy':
@@ -480,7 +607,7 @@ export class Simulation {
       }
       case 'sell': {
         const b = this.buildingById.get(cmd.building);
-        if (!b || b.dead || b.owner !== player) break;
+        if (!b || b.dead || b.owner !== player || b.def.neutral) break;
         p.credits += Math.floor((b.def.cost * b.hp) / b.def.hp / 2);
         this.removeBuilding(b, true);
         break;
@@ -526,6 +653,13 @@ export class Simulation {
     this.cleanup();
     this.rebuildHash();
     this.movement.step(this.units, this.hash);
+    // Maulwurf: in Fahrt eingegraben, beim Anhalten taucht er auf
+    for (const u of this.units) {
+      if (!u.def.burrows || u.dead) continue;
+      const was = u.burrowed;
+      u.burrowed = u.order !== null;
+      if (was && !u.burrowed) this.emit({ type: 'surfaced', owner: u.owner, id: u.id, x: u.x, y: u.y });
+    }
     recomputePower(this);
     if (this.tick % 3 === 1) updateFog(this);
     if (this.tick % 15 === 0) this.checkVictory();
@@ -541,7 +675,7 @@ export class Simulation {
     for (const p of this.playerList) {
       if (p.defeated) continue;
       const alive =
-        this.buildings.some((b) => !b.dead && b.owner === p.id && !b.def.wall) ||
+        this.buildings.some((b) => !b.dead && b.owner === p.id && !b.def.wall && !b.def.neutral) ||
         this.units.some((u) => !u.dead && u.owner === p.id && !!u.def.deploysTo);
       if (!alive) this.defeat(p);
     }
@@ -558,7 +692,16 @@ export class Simulation {
     if (p.defeated) return;
     p.defeated = true;
     for (const u of this.units) if (!u.dead && u.owner === p.id) this.killUnit(u);
-    for (const b of this.buildings) if (!b.dead && b.owner === p.id) this.removeBuilding(b, false);
+    for (const b of this.buildings) {
+      if (b.dead || b.owner !== p.id) continue;
+      if (b.def.neutral) {
+        b.owner = 0; // Bonus-Punkt wird wieder frei
+        continue;
+      }
+      for (const id of b.passengers) this.stored.delete(id);
+      b.passengers = [];
+      this.removeBuilding(b, false);
+    }
     for (const c of PRODUCTION_CATEGORIES) p.queues[c] = [];
     p.ready = {};
     this.emit({ type: 'playerDefeated', owner: p.id });

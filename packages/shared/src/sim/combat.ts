@@ -1,5 +1,4 @@
 import type { ArmorClass, WeaponDef } from '../data/rules';
-import { MoveClass } from '../map/terrain';
 import { isqrt } from '../math/fixed';
 import type { Simulation } from './simulation';
 import type { Building, Unit } from './unit';
@@ -22,7 +21,7 @@ export function armorOf(t: Target): ArmorClass {
 }
 
 function isAir(t: Target): boolean {
-  return !isBuilding(t) && t.def.moveClassId === MoveClass.Air;
+  return !isBuilding(t) && t.def.airborne;
 }
 
 /** Kann diese Waffe das Ziel überhaupt treffen (Boden/Luft, Schaden > 0)? */
@@ -55,6 +54,7 @@ export function findTarget(
   let bestScore = Infinity;
   const consider = (t: Target) => {
     if (t.dead || !sim.isEnemy(owner, t.owner)) return;
+    if (isBuilding(t) && t.def.invulnerable) return;
     if (!canHit(w, t)) return;
     const d = sim.distanceTo(x, y, t);
     if (d > radius || d < w.minRangeUnits) return;
@@ -75,7 +75,7 @@ export function findTarget(
 
 /** Feuert ein Geschoss ab. */
 function fire(sim: Simulation, sourceId: number, owner: number, x: number, y: number, w: WeaponDef, t: Target): void {
-  const homing = w.projectile !== 'shell';
+  const homing = w.projectile !== 'shell' && w.projectile !== 'bomb';
   sim.projectiles.push({
     id: sim.newId(),
     owner,
@@ -101,6 +101,11 @@ export function updateCombat(sim: Simulation): void {
     const w = u.def.weapon;
     if (!w) continue;
     if (u.cooldown > 0) u.cooldown--;
+    if (u.ammo === 0) {
+      // Keine Munition: zum Flugfeld
+      if (u.task?.kind !== 'rearm') u.task = { kind: 'rearm', airfieldId: 0, timer: 0 };
+      continue;
+    }
 
     let target: Target | null = null;
     const task = u.task;
@@ -129,11 +134,13 @@ export function updateCombat(sim: Simulation): void {
     if (u.cooldown <= 0) {
       fire(sim, u.id, u.owner, u.x, u.y, w, target);
       u.cooldown = w.reloadTicks;
+      if (u.ammo > 0) u.ammo--;
     }
   }
 
   for (const b of sim.buildings) {
     if (b.dead) continue;
+    if (b.passengers.length) garrisonFire(sim, b);
     const w = b.def.weapon;
     if (!w) continue;
     if (b.cooldown > 0) b.cooldown--;
@@ -149,6 +156,28 @@ export function updateCombat(sim: Simulation): void {
       // Strommangel: Türme feuern halb so schnell
       b.cooldown = sim.players[b.owner]?.lowPower ? w.reloadTicks * 2 : w.reloadTicks;
     }
+  }
+}
+
+/** Infanterie im Bunker schiesst von drinnen (mit etwas mehr Reichweite). */
+function garrisonFire(sim: Simulation, b: Building): void {
+  const bonus = (b.def.width * 1024) / 2;
+  for (const id of b.passengers) {
+    const p = sim.stored.get(id);
+    const w = p?.def.weapon;
+    if (!p || !w) continue;
+    if (p.cooldown > 0) p.cooldown--;
+    if (p.cooldown > 0) continue;
+    let t = b.targetId ? sim.getTarget(b.targetId) : undefined;
+    const range = w.rangeUnits + bonus;
+    if (t && (!canHit(w, t) || sim.distanceTo(b.x, b.y, t) > range || !sim.canSee(b.owner, t) || !sim.isEnemy(b.owner, t.owner))) t = undefined;
+    if (!t) t = findTarget(sim, b.owner, b.x, b.y, w, range) ?? undefined;
+    if (!t) continue;
+    b.targetId = t.id;
+    b.aimX = t.x - b.x;
+    b.aimY = t.y - b.y;
+    fire(sim, b.id, b.owner, b.x, b.y, w, t);
+    p.cooldown = w.reloadTicks;
   }
 }
 

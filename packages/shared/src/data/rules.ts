@@ -37,7 +37,7 @@ export const WeaponSchema = z.object({
   minRange: z.number().min(0).default(0),
   /** Nachladezeit in Sekunden. */
   reload: z.number().positive(),
-  projectile: z.enum(['bullet', 'rocket', 'cannon', 'shell', 'flak']),
+  projectile: z.enum(['bullet', 'rocket', 'cannon', 'shell', 'flak', 'bomb']),
   /** Geschosstempo in Kacheln pro Sekunde. */
   projectileSpeed: z.number().positive(),
   /** Flächenschaden-Radius in Kacheln (0 = nur das Ziel). */
@@ -66,6 +66,20 @@ export const UnitSchema = z.object({
   harvestCapacity: z.number().int().positive().optional(),
   engineer: z.boolean().default(false),
   deploysTo: z.string().optional(),
+  /** Fliegt wirklich (nur Flak/Raketen treffen). Jetpack-Infanterie fliegt tief: airborne = false. */
+  airborne: z.boolean().default(false),
+  /** Schüsse bis zum Aufmunitionieren am Flugfeld (Jets). */
+  ammo: z.number().int().positive().optional(),
+  /** Gräbt sich beim Fahren ein (unsichtbar für Gegner). */
+  burrows: z.boolean().default(false),
+  /** Schutzschild für Infanterie in der Nähe. */
+  shield: z.object({ radius: z.number().positive(), reduction: z.number().min(0).max(0.9) }).optional(),
+  /** Kann Einheiten mitnehmen. */
+  transport: z
+    .object({ capacity: z.number().int().positive(), accepts: z.array(z.enum(['infantry', 'vehicle'])) })
+    .optional(),
+  /** Kommt bereits beladen aus der Fabrik (z.B. Maulwurf mit 4 Schützen). */
+  initialPassengers: z.object({ type: z.string(), count: z.number().int().positive() }).optional(),
   sprite: z.string(),
   turret: z.boolean().default(false),
 });
@@ -93,6 +107,19 @@ export const BuildingSchema = z.object({
   wall: z.boolean().default(false),
   freeUnit: z.string().optional(),
   weapon: z.string().optional(),
+  /** Plätze für Infanterie, die von drinnen schiesst (Panzerbunker). */
+  garrison: z.number().int().min(0).default(0),
+  /** Repariert Fahrzeuge in der Nähe (gegen Glimmerit). */
+  repairsVehicles: z.boolean().default(false),
+  /** Muss am Wasser stehen (Werft). */
+  requiresWater: z.boolean().default(false),
+  /** Flugfeld: Jets munitionieren hier auf. */
+  airfield: z.boolean().default(false),
+  /** Neutrales Kartenobjekt (Bonus-Punkt), gehört anfangs niemandem. */
+  neutral: z.boolean().default(false),
+  invulnerable: z.boolean().default(false),
+  /** Glimmerit-Einkommen alle 2 Sekunden für den Besitzer. */
+  income: z.number().int().min(0).default(0),
   sprite: z.string(),
 });
 
@@ -111,6 +138,8 @@ export const FactionSchema = z.object({
 });
 
 export const AiDifficultySchema = z.object({
+  /** Eigener Bauplan (sonst der allgemeine aus ai.json). */
+  buildOrder: z.array(z.string()).optional(),
   /** Wie oft die KI nachdenkt (Sekunden). */
   thinkInterval: z.number().positive(),
   /** Erster Angriff frühestens nach … Sekunden. */
@@ -126,7 +155,21 @@ export const AiDifficultySchema = z.object({
   /** Glimmerit, das die KI nicht für Einheiten ausgibt (bremst «Leicht»). */
   reserveCredits: z.number().int().min(0),
   unitMix: z.record(z.string(), z.number().int().min(0)),
+  /** Mischung, wenn der Gegner über Land nicht erreichbar ist (Inselkarten). */
+  islandMix: z.record(z.string(), z.number().int().min(0)),
   maxArmy: z.number().int().positive(),
+  /** Ingenieure für Bonus-Punkte. */
+  engineers: z.number().int().min(0).default(0),
+  /** Mit zusätzlichem Bauwagen an weiteren Kristallfeldern ausbauen. */
+  expand: z.boolean().default(false),
+  /** Angriffe aus zwei Richtungen. */
+  twoFronts: z.boolean().default(false),
+  repairBuildings: z.boolean().default(false),
+  /**
+   * Greift erst an, wenn die eigene Armee um diesen Faktor stärker ist als alles,
+   * was die KI vom Gegner gesehen hat (0 = ohne Vergleich angreifen).
+   */
+  attackAdvantage: z.number().min(0).default(0),
 });
 export type AiDifficulty = z.infer<typeof AiDifficultySchema>;
 export const AI_LEVELS = ['easy', 'medium', 'hard'] as const;
@@ -299,11 +342,16 @@ export function loadRules(files: RulesFiles): Rules {
     }
     for (const u of rules.unitsOf(faction)) {
       if (u.deploysTo && !rules.building(faction, u.deploysTo)) throw new Error(`«${u.id}»: unbekanntes deploysTo.`);
+      if (u.initialPassengers && !rules.unit(faction, u.initialPassengers.type)) {
+        throw new Error(`«${u.id}»: unbekannte initialPassengers.`);
+      }
     }
     for (const b of rules.buildingsOf(faction)) {
       if (b.freeUnit && !rules.unit(faction, b.freeUnit)) throw new Error(`«${b.id}»: unbekannte freeUnit.`);
     }
   }
-  for (const id of ai.buildOrder) if (!known(id)) throw new Error(`ai.json: unbekannter Bauplan-Eintrag «${id}».`);
+  for (const order of [ai.buildOrder, ...Object.values(ai.difficulties).map((d) => d.buildOrder ?? [])]) {
+    for (const id of order) if (!known(id)) throw new Error(`ai.json: unbekannter Bauplan-Eintrag «${id}».`);
+  }
   return rules;
 }
