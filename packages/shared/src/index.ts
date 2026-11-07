@@ -26,5 +26,6 @@ export * from './sim/fog';
 export * from './sim/simulation';
 export * from './sim/setup';
 export * from './ai/skirmishAi';
+export * from './mission/mission';
 export * from './net/snapshot';
 export * from './net/lobby';

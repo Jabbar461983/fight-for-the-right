@@ -25,4 +25,8 @@ export type SimEvent =
   | { type: 'fired'; sourceId: number; owner: number; x: number; y: number; weaponId: string }
   | { type: 'impact'; x: number; y: number; weaponId: string; splash: number }
   | { type: 'playerDefeated'; owner: number }
+  // Kampagne
+  | { type: 'radio'; key: string; speaker: string }
+  | { type: 'objective'; id: string; key: string; status: 'open' | 'done' | 'failed' }
+  | { type: 'missionEnd'; victory: boolean; reasonKey?: string }
   | { type: 'gameOver'; winners: number[] };

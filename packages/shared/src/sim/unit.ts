@@ -49,7 +49,8 @@ export type Task =
 export interface Unit {
   readonly id: number;
   owner: number;
-  readonly def: UnitDef;
+  /** Ändert sich nur bei transferUnit (andere Fraktion → andere Werte). */
+  def: UnitDef;
   x: number;
   y: number;
   /** Position zu Beginn des letzten Ticks – für flüssige Darstellung (Interpolation). */
@@ -180,4 +181,6 @@ export interface Player {
   ghosts: Map<number, Ghost>;
   /** Interne Zeitstempel, damit Meldungen nicht im Sekundentakt kommen. */
   notifyTicks: Record<string, number>;
+  /** Kampagne: Einheiten/Gebäude, die in dieser Mission nicht gebaut werden dürfen. */
+  locked?: Set<string>;
 }

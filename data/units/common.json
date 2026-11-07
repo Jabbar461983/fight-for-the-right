@@ -52,6 +52,23 @@
       "sprite": "engineer"
     },
     {
+      "id": "researcher",
+      "nameKey": "unit.researcher",
+      "faction": "common",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "speed": 1.7,
+      "radius": 0.22,
+      "sight": 4,
+      "hp": 100,
+      "cost": 0,
+      "buildTime": 1,
+      "buildable": false,
+      "civilian": true,
+      "sprite": "researcher"
+    },
+    {
       "id": "constructionWagon",
       "nameKey": "unit.constructionWagon",
       "faction": "common",

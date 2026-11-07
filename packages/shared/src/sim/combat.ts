@@ -55,6 +55,7 @@ export function findTarget(
   const consider = (t: Target) => {
     if (t.dead || !sim.isEnemy(owner, t.owner)) return;
     if (isBuilding(t) && t.def.invulnerable) return;
+    if (!isBuilding(t) && t.def.civilian) return;
     if (!canHit(w, t)) return;
     const d = sim.distanceTo(x, y, t);
     if (d > radius || d < w.minRangeUnits) return;

@@ -275,11 +275,26 @@ export class Simulation {
     recomputePower(this);
   }
 
+  /** Gibt eine Einheit einem anderen Spieler (Kampagne: befreite Forscherin, Verstärkung). */
+  transferUnit(u: Unit, newOwner: number): void {
+    const p = this.players[newOwner];
+    if (!p || u.dead) return;
+    const def = this.rules.unit(p.faction, u.def.id);
+    if (!def) return;
+    u.owner = newOwner;
+    u.def = def;
+    u.order = null;
+    u.task = null;
+    u.targetId = 0;
+    this.emit({ type: 'unitCreated', id: u.id, owner: newOwner, defId: def.id });
+  }
+
   /** Fügt Schaden zu. `attacker` = Spieler, der getroffen hat (für Statistik). */
   damage(t: Unit | Building, amount: number, attacker: number): void {
     if (t.dead) return;
     const isBuilding = 'tx' in t;
     if (isBuilding && (t as Building).def.invulnerable) return;
+    if (!isBuilding && (t as Unit).def.civilian) return;
     if (!isBuilding) amount = this.shielded(t as Unit, amount);
     t.hp -= Math.max(1, amount);
     if (this.isEnemy(attacker, t.owner)) {
@@ -475,6 +490,7 @@ export class Simulation {
       if (!b || b.dead || b.owner !== player) return false;
     }
     if ((cmd.type === 'attack' || cmd.type === 'enter' || cmd.type === 'dock') && !this.getTarget(cmd.target)) return false;
+    if (cmd.type === 'attack' && this.getUnit(cmd.target)?.def.civilian) return false;
     this.pending.push({ player, cmd });
     return true;
   }

@@ -26,6 +26,8 @@ export interface Availability {
   missing: string[];
   /** Kein Gebäude, das diese Kategorie herstellt. */
   noProducer: boolean;
+  /** In dieser Mission gesperrt (wird gar nicht angezeigt). */
+  locked: boolean;
 }
 
 /** Kann der Spieler diesen Typ bauen? (Voraussetzungen erfüllt, Fabrik vorhanden) */
@@ -34,7 +36,8 @@ export function availability(sim: Simulation, player: number, def: UnitDef | Bui
   const missing = def.buildable ? def.prerequisites.filter((p) => !owned.has(p)) : [def.id];
   const cat = def.category as ProductionCategory;
   const noProducer = producersOf(sim, player, cat).length === 0;
-  return { available: missing.length === 0 && !noProducer, missing, noProducer };
+  const locked = !!sim.players[player]?.locked?.has(def.id);
+  return { available: missing.length === 0 && !noProducer && !locked, missing, noProducer, locked };
 }
 
 /** Typdefinition für einen Bauschlangen-Eintrag. */

@@ -72,6 +72,8 @@ export const UnitSchema = z.object({
   ammo: z.number().int().positive().optional(),
   /** Gräbt sich beim Fahren ein (unsichtbar für Gegner). */
   burrows: z.boolean().default(false),
+  /** Zivilist (z.B. Forscherin in der Kampagne): wird nie beschossen. */
+  civilian: z.boolean().default(false),
   /** Schutzschild für Infanterie in der Nähe. */
   shield: z.object({ radius: z.number().positive(), reduction: z.number().min(0).max(0.9) }).optional(),
   /** Kann Einheiten mitnehmen. */
