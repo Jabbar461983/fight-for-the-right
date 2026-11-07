@@ -62,6 +62,7 @@ export class GameRoom extends Room {
       mode: 'ffa',
       startCredits: 3000,
       speed: 1,
+      bonusPoints: true,
       slots: Array.from({ length: MAX_SLOTS }, (_, i) => emptySlot(i, i < 2 ? 'open' : 'closed')),
       chat: [],
       started: false,
@@ -193,6 +194,7 @@ export class GameRoom extends Room {
       if (m.mode) this.lobby.mode = m.mode;
       if (m.startCredits && (START_CREDITS as readonly number[]).includes(m.startCredits)) this.lobby.startCredits = m.startCredits;
       if (m.speed && (GAME_SPEEDS as readonly number[]).includes(m.speed)) this.lobby.speed = m.speed;
+      if (m.bonusPoints !== undefined) this.lobby.bonusPoints = m.bonusPoints;
       for (const s of this.lobby.slots) s.ready = false;
       this.broadcastLobby();
     });
@@ -251,7 +253,7 @@ export class GameRoom extends Room {
       team: teamFor(lobby, s, i),
       ai: s.kind === 'ai' ? s.ai : undefined,
     }));
-    this.sim = createSkirmish({ map: loadMap(lobby.mapId), rules, slots, startCredits: lobby.startCredits });
+    this.sim = createSkirmish({ map: loadMap(lobby.mapId), rules, slots, startCredits: lobby.startCredits, bonusPoints: lobby.bonusPoints });
     this.index = new NetIndex(this.sim);
     this.startInfo = {
       mapId: lobby.mapId,

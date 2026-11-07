@@ -101,6 +101,7 @@ describe('Lobby-Regeln', () => {
       mode: 'ffa',
       startCredits: 3000,
       speed: 1,
+      bonusPoints: true,
       slots: [0, 1, 2, 3].map((i) => emptySlot(i, 'closed')),
       chat: [],
       started: false,

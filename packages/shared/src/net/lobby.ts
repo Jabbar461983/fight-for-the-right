@@ -44,6 +44,8 @@ export interface LobbyState {
   mode: GameMode;
   startCredits: number;
   speed: number;
+  /** Neutrale Glimmerit-Quellen auf der Karte (Ingenieure können sie übernehmen). */
+  bonusPoints: boolean;
   slots: LobbySlot[];
   chat: { from: string; msg: ChatMessage }[];
   started: boolean;
@@ -75,6 +77,7 @@ export const LobbyMessages = {
     mode: z.enum(GAME_MODES).optional(),
     startCredits: z.number().int().optional(),
     speed: z.number().optional(),
+    bonusPoints: z.boolean().optional(),
   }),
   ready: z.object({ ready: z.boolean() }),
   chat: z.object({ msg: z.enum(CHAT_MESSAGES) }),
