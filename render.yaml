@@ -1,0 +1,26 @@
+# Render-Blueprint für den Mehrspieler-Server (Gratis-Stufe, Frankfurt).
+# Einrichtung: render.com → New → Blueprint → dieses Repository wählen.
+# Render baut und startet den Server bei jedem Push auf main neu – aber erst,
+# wenn die GitHub-Prüfungen (CI: Typecheck + Tests) grün sind.
+services:
+  - type: web
+    name: fight-for-the-right
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci && npm run build:server
+    startCommand: npm run start:server
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - packages/server/**
+        - packages/shared/**
+        - data/**
+        - package.json
+        - package-lock.json
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: '24'

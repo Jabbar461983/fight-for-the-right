@@ -28,7 +28,12 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # Mehrspieler-Server-Adresse: GitHub-Repository-Variable SERVER_URL (z.B. wss://….onrender.com)
       - run: npm run build
+        env:
+          VITE_SERVER_URL: ${{ vars.SERVER_URL }}
+      # Prüft, dass sich der Server bündeln lässt (Render baut ihn selbst)
+      - run: npm run build:server
       - uses: actions/upload-pages-artifact@v5
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:

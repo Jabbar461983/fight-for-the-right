@@ -17,8 +17,14 @@ npm install
 npm run dev
 ```
 
-Dann im Browser http://localhost:5173 öffnen. Zum Testen auf Tablet oder Handy im selben WLAN die
-«Network»-Adresse verwenden, die im Terminal angezeigt wird.
+Das startet den Mehrspieler-Server (Port 2567) und das Spiel. Dann im Browser http://localhost:5173 öffnen.
+Zum Testen auf Tablet oder Handy im selben WLAN die «Network»-Adresse verwenden, die im Terminal angezeigt
+wird – auch der Mehrspieler funktioniert so im Heimnetz.
+
+## Multiplayer
+
+Im Menü «Multiplayer» einen Raum erstellen und den 6-stelligen Code oder den Einladungslink an Freunde
+schicken. Der Server läuft gratis bei Render; nach längerer Pause braucht er etwa eine Minute zum Aufwachen.
 
 ## Projektaufbau
 

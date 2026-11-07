@@ -22,7 +22,7 @@ Vollständige Anforderungen: Entwicklungs-Prompt von Christian (7.11.2026), Kapi
 ```
 packages/shared   Spielkern – reine TypeScript-Logik, KEINE Phaser-/DOM-Abhängigkeit
 packages/client   Browser: Phaser 4 (Darstellung), eigene DOM-Eingabe, HTML-Oberfläche
-packages/server   (ab Etappe 3) Colyseus-Server, führt den Spielkern autoritativ aus
+packages/server   Colyseus-Server (Mehrspieler), führt den Spielkern autoritativ aus
 data/             Inhalte: rules/ (Waffen, Gebäude, Fraktionen, KI), units/, maps/ (Tiled-JSON), i18n/
 scripts/          Werkzeuge (z.B. Kartengenerator)
 ```
@@ -79,6 +79,21 @@ markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt d
 - Achtung Browser-Vorschau: Ist das Fenster ausgeblendet, zeichnet der Browser kaum neu – Screenshots sind
   dann veraltet. Zustand lieber per `window.fftr` prüfen.
 
+### Mehrspieler (`@fftr/server` + `shared/src/net`)
+- **Server-autoritativ:** Der Server (`GameRoom.ts`) rechnet die Simulation; Clients schicken nur Befehle
+  (`'cmd'`, geprüft durch `sim.issue`). Alle 2 Ticks bekommt jeder Client eine **Momentaufnahme**
+  (`net/snapshot.ts`): nur was er sehen darf (Nebel → kein Schummeln) und nur Änderungen. Der Client
+  trägt sie in eine **Spiegel-Simulation** ein (`applySnapshot`, `sim.mirror*`), die nie `step()` aufruft –
+  die Spielszene stellt sie wie im Einzelspieler dar und interpoliert zwischen den Aufnahmen.
+- **Lobby** ohne Colyseus-Schema: der Server schickt den Zustand als Nachricht `'lobby'`; Regeln (Startprüfung,
+  Teams je Modus, Namensfilter, Raumcodes) in `net/lobby.ts`. Nachrichten werden mit zod geprüft.
+- Raumcode = Colyseus-`roomId` (6 Zeichen ohne 0/O/1/I/L), Räume privat; Einladung per `?join=CODE`.
+- Verbindungsabbruch: Platz bleibt 2 Min. frei (`allowReconnection`); Seite neu laden → automatische Rückkehr
+  (Token in sessionStorage). Wer endgültig geht, wird durch eine KI ersetzt.
+- Server-Adresse im Client: `VITE_SERVER_URL` (beim Bauen, GitHub-Variable `SERVER_URL`), lokal `ws://<host>:2567`.
+- Hosting: **Render Free** (Frankfurt) über `render.yaml`; schläft nach 15 Min. ohne Spieler, Aufwachen ≈ 1 Min.
+  (der Client weckt per `/health` und zeigt einen Hinweis). Deploy nach grüner CI (`autoDeployTrigger: checksPass`).
+
 ### Karten
 - Format: Tiled-JSON, Ebene `terrain` (Tileset-Kacheln mit Eigenschaft `terrain`), Objektebene mit
   `spawn` (Eigenschaft `player`) und `crystalField` (`radius`, `amount`). Geländearten:
@@ -90,8 +105,9 @@ markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt d
 
 ```bash
 npm install          # Abhängigkeiten
-npm run dev          # Spiel lokal starten (http://localhost:5173, im WLAN über die angezeigte Network-Adresse)
-npm test             # Tests des Spielkerns (Vitest)
+npm run dev          # Server (Port 2567) + Client (http://localhost:5173, im WLAN: «Network»-Adresse)
+npm test             # Tests von Spielkern und Server (Vitest)
+npm run build:server # Server als einzelne Datei bündeln (packages/server/dist/server.js)
 npm run typecheck    # TypeScript-Prüfung aller Pakete
 npm run build        # Produktions-Build nach packages/client/dist
 npm run maps         # Startkarten neu erzeugen
@@ -111,7 +127,11 @@ npm run maps         # Startkarten neu erzeugen
 
 - **Etappe 1 – Fundament:** abgenommen (7.11.2026). Grafik wurde als «sehr rudimentär» empfunden →
   in Etappe 2 bessere Platzhalter (runde Geländeränder, Fraktions-Look) gezeichnet.
-- **Etappe 2 – Spielbares Gefecht:** umgesetzt, wartet auf Abnahme. Wirtschaft (Sammler, Raffinerie, Silo,
+- **Etappe 3 – Multiplayer:** umgesetzt, wartet auf Abnahme. Räume mit Code/Link, Lobby (Plätze: Mensch/KI/
+  offen/zu, Fraktion, Farbe, Team, Bereit, Chat mit vorgefertigten Nachrichten), Modi Jeder-gegen-jeden /
+  Teams / Gemeinsam gegen KI, Schnellnachrichten mit Ping, Wiederverbinden, KI-Übernahme, Endstatistik.
+  Karte «Vier Winde» (4 Spieler) vorgezogen für die 2v2-Abnahme. Gefecht gegen KI jetzt mit 1–3 Gegnern.
+- **Etappe 2 – Spielbares Gefecht:** abgenommen (7.11.2026). Wirtschaft (Sammler, Raffinerie, Silo,
   Nachwachsen, Lager voll), Basisbau (Bauleiste, Platzieren grün/rot, Pause/Abbruch, Verkaufen, Reparieren),
   Strom (Mangel bremst Bau/Türme, schaltet Radar ab), Kampf (Waffen × Panzerung, Haltungen, Angriffsbewegung,
   Türme, Flächenschaden), Nebel mit Geistern, gemeinsame Bodeneinheiten beider Fraktionen (Aero billiger und
