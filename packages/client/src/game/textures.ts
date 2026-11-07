@@ -18,6 +18,8 @@ const TP = 64;
 
 /** Spielerfarben (Index = Farbnummer in der Lobby). */
 export const PLAYER_COLORS = [0x3fa9f5, 0xe8503a, 0x5cc44a, 0xf2c230, 0xa45fd4, 0xf28c28];
+/** Farbe für neutrale Objekte (freie Bonus-Punkte). */
+export const NEUTRAL_COLOR = 0x9a9aa8;
 
 const TRIM: Record<Faction, { trim: string; dark: string; accent: string }> = {
   aero: { trim: '#e9f1f7', dark: '#2b4a66', accent: '#9fd8ff' },
@@ -109,7 +111,31 @@ function drawInfantry(color: number, faction: Faction, kind: string): HTMLCanvas
     ]);
   }
   // Ausrüstung
-  if (kind === 'rocket') {
+  if (kind === 'jetpack') {
+    // Grosser Raketenrucksack mit zwei Flammen
+    rr(ctx, cx - 16, cy - 9, 11, 18, 5);
+    fillStroke(ctx, '#e9f1f7', 2);
+    ctx.fillStyle = '#ffb02e';
+    for (const y of [-5, 5]) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 16, cy + y - 2.5);
+      ctx.lineTo(cx - 23, cy + y);
+      ctx.lineTo(cx - 16, cy + y + 2.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    rr(ctx, cx, cy + 2, 16, 4, 1.5);
+    fillStroke(ctx, '#3a3a46', 2);
+  } else if (kind === 'shield') {
+    // Grosser Schutzschild vorne
+    ctx.beginPath();
+    ctx.ellipse(cx + 11, cy, 4, 13, 0, 0, Math.PI * 2);
+    fillStroke(ctx, f.trim, 2.5);
+    rivets(ctx, [
+      [cx + 11, cy - 7],
+      [cx + 11, cy + 7],
+    ]);
+  } else if (kind === 'rocket') {
     rr(ctx, cx - 6, cy - 13, 24, 6, 3);
     fillStroke(ctx, faction === 'aero' ? '#c6d4de' : '#6b7a4a', 2);
     ctx.fillStyle = '#e8483b';
@@ -158,8 +184,18 @@ function drawVehicle(color: number, faction: Faction, kind: string): HTMLCanvasE
   const hl = big ? 28 : kind === 'artillery' ? 26 : 23;
   const hw = big ? 14 : 12;
   shadow(ctx, cx, cy, hl + 2, hw + 8);
+  if (kind === 'hover') {
+    // Schwebeschürze statt Ketten, mit Luftpolster-Glühen
+    ctx.fillStyle = 'rgba(120,220,255,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, hl + 6, hw + 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, hl + 2, hw + 6, 0, 0, Math.PI * 2);
+    fillStroke(ctx, '#3a3a46', 2.5);
+  }
   // Ketten
-  for (const sy of [-1, 1]) {
+  for (const sy of kind === 'hover' ? [] : [-1, 1]) {
     rr(ctx, cx - hl - 2, cy + sy * (hw + 2) - 6, hl * 2 + 4, 12, faction === 'aero' ? 6 : 2);
     fillStroke(ctx, '#3a3a46', 2.5);
     ctx.strokeStyle = '#5c5c6c';
@@ -299,9 +335,28 @@ function drawTurret(color: number, faction: Faction, kind: string): HTMLCanvasEl
     rr(ctx, cx + len - 5, y - w / 2 - 1.5, 6, w + 3, 2);
     fillStroke(ctx, faction === 'aero' ? '#e9f1f7' : f.trim, 2);
   };
-  if (kind === 'flak') {
+  if (kind === 'flak' || kind === 'flakPosition') {
     barrel(cy - 4, 22, 4);
     barrel(cy + 4, 22, 4);
+  } else if (kind === 'twin') {
+    barrel(cy - 6, 30, 6);
+    barrel(cy + 6, 30, 6);
+  } else if (kind === 'cruiser') {
+    barrel(cy - 5, 32, 5);
+    barrel(cy + 5, 32, 5);
+  } else if (kind === 'boat') {
+    barrel(cy, 18, 3);
+  } else if (kind === 'rocketBattery') {
+    // Raketenwerfer-Gestell mit sechs Rohren
+    rr(ctx, cx - 6, cy - 14, 26, 28, 3);
+    fillStroke(ctx, faction === 'aero' ? '#c6d4de' : '#6b7a4a', 2.5);
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 2; j++) {
+        circle(ctx, cx + 4 + j * 9, cy - 8 + i * 8, 3);
+        fillStroke(ctx, '#e8483b', 1.5);
+      }
+    }
+    return c;
   } else if (kind === 'artillery') {
     barrel(cy, 36, 6);
   } else if (kind === 'mgTower') {
@@ -342,15 +397,285 @@ function drawTurret(color: number, faction: Faction, kind: string): HTMLCanvasEl
   return c;
 }
 
+// ───────────── Flieger, Schiffe, Spezialeinheiten (Blick nach rechts) ─────────────
+
+/** Helikopter-Rumpf (Rotor ist eine eigene, drehende Textur). */
+function drawHeli(color: number, faction: Faction, transport: boolean): HTMLCanvasElement {
+  const [c, ctx] = canvas(88, 88);
+  const cx = 44;
+  const cy = 44;
+  const f = TRIM[faction];
+  // Heckausleger
+  rr(ctx, cx - 36, cy - 3, 30, 6, 3);
+  fillStroke(ctx, rgb(color, 0.8), 2);
+  rr(ctx, cx - 40, cy - 9, 7, 18, 3);
+  fillStroke(ctx, f.trim, 2);
+  // Rumpf
+  ctx.beginPath();
+  if (transport) ctx.roundRect(cx - 14, cy - 12, 38, 24, 11);
+  else ctx.ellipse(cx + 4, cy, 18, 11, 0, 0, Math.PI * 2);
+  fillStroke(ctx, rgb(color));
+  // Glaskanzel
+  ctx.fillStyle = 'rgba(140,210,255,0.9)';
+  ctx.beginPath();
+  ctx.ellipse(cx + (transport ? 17 : 15), cy, 6, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = OUTLINE;
+  ctx.stroke();
+  highlight(ctx, cx + 14, cy - 3, 2);
+  if (!transport) {
+    // Raketenstummel
+    for (const s of [-1, 1]) {
+      rr(ctx, cx - 2, cy + s * 13 - 3, 16, 6, 3);
+      fillStroke(ctx, '#e9f1f7', 1.5);
+    }
+  } else {
+    ctx.strokeStyle = f.trim;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, cy);
+    ctx.lineTo(cx + 8, cy);
+    ctx.stroke();
+  }
+  return c;
+}
+
+/** Rotorblätter (halbtransparent, drehen sich im Spiel). */
+function drawRotor(): HTMLCanvasElement {
+  const [c, ctx] = canvas(96, 96);
+  ctx.translate(48, 48);
+  ctx.fillStyle = 'rgba(40,40,52,0.55)';
+  for (let k = 0; k < 4; k++) {
+    ctx.rotate(Math.PI / 2);
+    ctx.beginPath();
+    ctx.roundRect(0, -3, 44, 6, 3);
+    ctx.fill();
+  }
+  ctx.fillStyle = OUTLINE;
+  circle(ctx, 0, 0, 4);
+  ctx.fill();
+  return c;
+}
+
+function drawJet(color: number, faction: Faction): HTMLCanvasElement {
+  const [c, ctx] = canvas(80, 80);
+  const cx = 40;
+  const cy = 40;
+  // Deltaflügel
+  ctx.beginPath();
+  ctx.moveTo(cx + 26, cy);
+  ctx.lineTo(cx - 16, cy - 26);
+  ctx.lineTo(cx - 8, cy);
+  ctx.lineTo(cx - 16, cy + 26);
+  ctx.closePath();
+  fillStroke(ctx, rgb(color));
+  // Rumpf
+  rr(ctx, cx - 22, cy - 5, 50, 10, 5);
+  fillStroke(ctx, TRIM[faction].trim, 2);
+  ctx.fillStyle = 'rgba(140,210,255,0.9)';
+  rr(ctx, cx + 10, cy - 3, 10, 6, 3);
+  ctx.fill();
+  // Triebwerksflamme
+  ctx.fillStyle = '#ffb02e';
+  ctx.beginPath();
+  ctx.moveTo(cx - 22, cy - 4);
+  ctx.lineTo(cx - 34, cy);
+  ctx.lineTo(cx - 22, cy + 4);
+  ctx.closePath();
+  ctx.fill();
+  return c;
+}
+
+/** Luftschiff: Zeppelin (mit Radarschüssel) oder Bomben-Luftschiff (mit Gondel). */
+function drawBlimp(color: number, faction: Faction, radar: boolean): HTMLCanvasElement {
+  const [c, ctx] = canvas(112, 80);
+  const cx = 56;
+  const cy = 40;
+  const f = TRIM[faction];
+  // Leitwerk
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(cx - 30, cy + s * 6);
+    ctx.lineTo(cx - 48, cy + s * 22);
+    ctx.lineTo(cx - 40, cy + s * 4);
+    ctx.closePath();
+    fillStroke(ctx, f.trim, 2);
+  }
+  // Hülle
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 44, 20, 0, 0, Math.PI * 2);
+  fillStroke(ctx, rgb(color), 3);
+  // Streifen
+  ctx.strokeStyle = rgb(color, 0.75);
+  ctx.lineWidth = 2;
+  for (const x of [-20, 0, 20]) {
+    ctx.beginPath();
+    ctx.ellipse(cx + x, cy, 4, 18, 0, -Math.PI / 2, Math.PI / 2);
+    ctx.stroke();
+  }
+  highlight(ctx, cx + 10, cy - 9, 6);
+  if (radar) {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 9, 12, 0, 0, Math.PI * 2);
+    fillStroke(ctx, f.trim, 2);
+    ctx.strokeStyle = '#e8483b';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + 9, cy);
+    ctx.stroke();
+  } else {
+    rr(ctx, cx - 12, cy - 6, 24, 12, 4);
+    fillStroke(ctx, '#5a5a66', 2);
+    for (const x of [-6, 0, 6]) {
+      circle(ctx, cx + x, cy, 2.5);
+      fillStroke(ctx, '#2e2e3a', 1);
+    }
+  }
+  return c;
+}
+
+/** Schiffe: patrol | transport | missile | cruiser */
+function drawBoat(color: number, faction: Faction, kind: string): HTMLCanvasElement {
+  const big = kind === 'cruiser';
+  const [c, ctx] = canvas(big ? 120 : 96, 80);
+  const cx = big ? 60 : 48;
+  const cy = 40;
+  const hl = big ? 46 : kind === 'transport' ? 32 : 34;
+  const hw = big ? 17 : kind === 'transport' ? 17 : 12;
+  const f = TRIM[faction];
+  // Bugwelle
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath();
+  ctx.ellipse(cx + hl - 4, cy, 10, hw + 4, 0, -Math.PI / 2, Math.PI / 2);
+  ctx.fill();
+  // Rumpf
+  ctx.beginPath();
+  if (kind === 'transport') {
+    ctx.roundRect(cx - hl, cy - hw, hl * 2, hw * 2, 6);
+  } else {
+    ctx.moveTo(cx + hl, cy);
+    ctx.quadraticCurveTo(cx + hl * 0.4, cy - hw, cx - hl * 0.6, cy - hw);
+    ctx.lineTo(cx - hl, cy - hw * 0.8);
+    ctx.lineTo(cx - hl, cy + hw * 0.8);
+    ctx.lineTo(cx - hl * 0.6, cy + hw);
+    ctx.quadraticCurveTo(cx + hl * 0.4, cy + hw, cx + hl, cy);
+    ctx.closePath();
+  }
+  fillStroke(ctx, rgb(color), 3);
+  // Deck
+  ctx.beginPath();
+  ctx.roundRect(cx - hl * 0.7, cy - hw * 0.6, hl * 1.2, hw * 1.2, 4);
+  fillStroke(ctx, faction === 'aero' ? '#e9f1f7' : '#b9a27a', 2);
+  if (kind === 'transport') {
+    // Laderampe vorne
+    rr(ctx, cx + hl - 10, cy - hw + 3, 8, hw * 2 - 6, 2);
+    fillStroke(ctx, '#ffd23f', 2);
+  } else if (kind === 'missile') {
+    for (const s of [-1, 1]) {
+      rr(ctx, cx - 14, cy + s * 5 - 3, 22, 6, 3);
+      fillStroke(ctx, '#e9f1f7', 1.5);
+      ctx.fillStyle = '#e8483b';
+      ctx.fillRect(cx + 6, cy + s * 5 - 2, 3, 4);
+    }
+  } else if (kind === 'cruiser') {
+    for (const x of [-20, -6]) {
+      circle(ctx, cx + x, cy, 6);
+      fillStroke(ctx, f.trim, 2);
+      ctx.fillStyle = '#2e2e3a';
+      circle(ctx, cx + x, cy, 3);
+      ctx.fill();
+    }
+  }
+  // Brücke mit Fenster
+  rr(ctx, cx - hl * 0.45, cy - 6, 10, 12, 3);
+  fillStroke(ctx, f.trim, 2);
+  ctx.fillStyle = 'rgba(140,210,255,0.9)';
+  ctx.fillRect(cx - hl * 0.45 + 6, cy - 4, 3, 8);
+  return c;
+}
+
+/** Schreitpanzer «Koloss»: Körper auf vier Stahlbeinen. */
+function drawWalker(color: number, faction: Faction): HTMLCanvasElement {
+  const [c, ctx] = canvas(96, 96);
+  const cx = 48;
+  const cy = 48;
+  const f = TRIM[faction];
+  shadow(ctx, cx, cy, 34, 30);
+  for (const [dx, dy] of [
+    [-22, -24],
+    [22, -24],
+    [-22, 24],
+    [22, 24],
+  ]) {
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(cx + dx * 0.4, cy + dy * 0.4);
+    ctx.lineTo(cx + dx, cy + dy);
+    ctx.stroke();
+    ctx.strokeStyle = f.trim;
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    circle(ctx, cx + dx, cy + dy, 6);
+    fillStroke(ctx, '#5a5a66', 2);
+  }
+  ctx.beginPath();
+  ctx.roundRect(cx - 24, cy - 20, 48, 40, 6);
+  fillStroke(ctx, rgb(color), 3);
+  rivets(ctx, [
+    [cx - 19, cy - 15],
+    [cx + 19, cy - 15],
+    [cx - 19, cy + 15],
+    [cx + 19, cy + 15],
+  ]);
+  // Dampfrohre
+  for (const y of [-12, 12]) {
+    rr(ctx, cx - 30, cy + y - 3, 10, 6, 2);
+    fillStroke(ctx, '#5a5a66', 1.5);
+  }
+  return c;
+}
+
+/** Maulwurf: Fahrzeug mit Bohrkopf. */
+function drawMole(color: number, faction: Faction): HTMLCanvasElement {
+  const base = drawVehicle(color, faction, 'mole');
+  const ctx = base.getContext('2d')!;
+  const cx = 40;
+  const cy = 40;
+  ctx.beginPath();
+  ctx.moveTo(cx + 22, cy - 12);
+  ctx.lineTo(cx + 38, cy);
+  ctx.lineTo(cx + 22, cy + 12);
+  ctx.closePath();
+  fillStroke(ctx, '#9aa0aa', 2.5);
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(cx + 24 + i * 3, cy - 10 + i * 2.5);
+    ctx.lineTo(cx + 24 + i * 3, cy + 10 - i * 2.5);
+    ctx.stroke();
+  }
+  return base;
+}
+
 export function unitKey(sprite: string, faction: Faction, color: number, part: 'body' | 'turret' = 'body'): string {
   return `u_${sprite}_${faction}_${color.toString(16)}_${part}`;
 }
 
+/** Welcher Turm gehört zu welcher Einheit? */
+const TURRET_KIND: Record<string, string> = {
+  flakWagon: 'flak',
+  artillery: 'artillery',
+  colossus: 'twin',
+  steamCruiser: 'cruiser',
+  patrolBoat: 'boat',
+};
+
 function unitCanvas(def: UnitDef, faction: Faction, color: number, part: 'body' | 'turret'): HTMLCanvasElement {
-  if (part === 'turret') {
-    const kind = def.sprite === 'flakWagon' ? 'flak' : def.sprite === 'artillery' ? 'artillery' : 'tank';
-    return drawTurret(color, faction, kind);
-  }
+  if (part === 'turret') return drawTurret(color, faction, TURRET_KIND[def.sprite] ?? 'tank');
   switch (def.sprite) {
     case 'rifleman':
       return drawInfantry(color, faction, 'rifle');
@@ -358,6 +683,34 @@ function unitCanvas(def: UnitDef, faction: Faction, color: number, part: 'body' 
       return drawInfantry(color, faction, 'rocket');
     case 'engineer':
       return drawInfantry(color, faction, 'engineer');
+    case 'jetpackRanger':
+      return drawInfantry(color, faction, 'jetpack');
+    case 'shieldBearer':
+      return drawInfantry(color, faction, 'shield');
+    case 'gunship':
+      return drawHeli(color, faction, false);
+    case 'transportHeli':
+      return drawHeli(color, faction, true);
+    case 'cometFighter':
+      return drawJet(color, faction);
+    case 'radarZeppelin':
+      return drawBlimp(color, faction, true);
+    case 'bomberAirship':
+      return drawBlimp(color, faction, false);
+    case 'patrolBoat':
+      return drawBoat(color, faction, 'patrol');
+    case 'transportBoat':
+      return drawBoat(color, faction, 'transport');
+    case 'missileBoat':
+      return drawBoat(color, faction, 'missile');
+    case 'steamCruiser':
+      return drawBoat(color, faction, 'cruiser');
+    case 'colossus':
+      return drawWalker(color, faction);
+    case 'mole':
+      return drawMole(color, faction);
+    case 'hoverTank':
+      return drawVehicle(color, faction, 'hover');
     case 'harvester':
       return drawVehicle(color, faction, 'harvester');
     case 'constructionWagon':
@@ -657,6 +1010,171 @@ function drawBuilding(def: BuildingDef, color: number, faction: Faction): HTMLCa
       ctx.fillRect(8, H - 12, W - 16, 5);
       break;
     }
+    case 'airfield': {
+      // Landeplatz mit «H», kleiner Turm mit Windsack
+      rr(ctx, 8, 8, W * 0.62, H - 16, 6);
+      fillStroke(ctx, '#5a5d68', 3);
+      ctx.strokeStyle = '#ffd23f';
+      ctx.lineWidth = 5;
+      const hx = 8 + W * 0.31;
+      const hy = H / 2;
+      ctx.beginPath();
+      ctx.moveTo(hx - 12, hy - 16);
+      ctx.lineTo(hx - 12, hy + 16);
+      ctx.moveTo(hx + 12, hy - 16);
+      ctx.lineTo(hx + 12, hy + 16);
+      ctx.moveTo(hx - 12, hy);
+      ctx.lineTo(hx + 12, hy);
+      ctx.stroke();
+      circle(ctx, hx, hy, 26);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.stroke();
+      body(W * 0.7, 14, W * 0.26, H - 28);
+      rr(ctx, W * 0.75, 6, W * 0.16, 22, 4);
+      fillStroke(ctx, f.trim, 2.5);
+      ctx.fillStyle = 'rgba(140,210,255,0.9)';
+      ctx.fillRect(W * 0.77, 11, W * 0.12, 8);
+      break;
+    }
+    case 'shipyard': {
+      // Halle mit Kran, Slipanlage Richtung Wasser
+      body(8, 8, W * 0.55, H - 16);
+      rr(ctx, W * 0.62, 10, W * 0.34, H - 20, 3);
+      fillStroke(ctx, '#7c6650', 2.5);
+      ctx.strokeStyle = '#4e3b27';
+      ctx.lineWidth = 2;
+      for (let y = 18; y < H - 12; y += 9) {
+        ctx.beginPath();
+        ctx.moveTo(W * 0.62, y);
+        ctx.lineTo(W * 0.96, y);
+        ctx.stroke();
+      }
+      rr(ctx, 20, 6, W * 0.7, 9, 2);
+      fillStroke(ctx, '#ffd23f', 2.5);
+      emblem(8 + W * 0.27, H / 2 + 4, 15, () => {
+        // Anker
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.lineTo(0, 8);
+        ctx.moveTo(-6, -4);
+        ctx.lineTo(6, -4);
+        ctx.moveTo(-8, 3);
+        ctx.quadraticCurveTo(0, 12, 8, 3);
+        ctx.stroke();
+      });
+      break;
+    }
+    case 'repairStation': {
+      rr(ctx, 6, 6, W - 12, H - 12, 6);
+      fillStroke(ctx, '#5a5d68', 3);
+      ctx.strokeStyle = '#ffd23f';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 6]);
+      rr(ctx, 14, 14, W - 28, H - 28, 4);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      emblem(W / 2, H / 2, 18, () => {
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-8, 8);
+        ctx.lineTo(6, -6);
+        ctx.stroke();
+        circle(ctx, 7, -7, 5);
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      });
+      break;
+    }
+    case 'techCenter': {
+      body(8, 14, W - 16, H - 22);
+      // Kuppel mit Antenne
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2 + 4, W * 0.28, Math.PI, 0);
+      ctx.closePath();
+      fillStroke(ctx, aero ? 'rgba(140,210,255,0.95)' : f.trim, 3);
+      highlight(ctx, W / 2 - 10, H / 2 - 8, 5);
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(W / 2, H / 2 - W * 0.24);
+      ctx.lineTo(W / 2, 4);
+      ctx.stroke();
+      circle(ctx, W / 2, 6, 5);
+      fillStroke(ctx, '#7af7ff', 2);
+      break;
+    }
+    case 'bunker': {
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      circle(ctx, W / 2 + 4, H / 2 + 5, W * 0.45);
+      ctx.fill();
+      circle(ctx, W / 2, H / 2, W * 0.45);
+      fillStroke(ctx, '#8d8a80', 3.5);
+      circle(ctx, W / 2, H / 2, W * 0.3);
+      fillStroke(ctx, main, 3);
+      ctx.fillStyle = OUTLINE;
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2;
+        ctx.save();
+        ctx.translate(W / 2 + Math.cos(a) * W * 0.38, H / 2 + Math.sin(a) * W * 0.38);
+        ctx.rotate(a);
+        ctx.fillRect(-2, -6, 4, 12);
+        ctx.restore();
+      }
+      rivets(ctx, [
+        [W / 2 - 10, H / 2],
+        [W / 2 + 10, H / 2],
+        [W / 2, H / 2 - 10],
+        [W / 2, H / 2 + 10],
+      ]);
+      break;
+    }
+    case 'glimmerSource': {
+      // Kristall-Geysir; der Ring zeigt den Besitzer (grau = frei)
+      circle(ctx, W / 2, H / 2, W * 0.46);
+      fillStroke(ctx, '#d8c896', 3);
+      circle(ctx, W / 2, H / 2, W * 0.36);
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = main;
+      ctx.stroke();
+      const glow = ctx.createRadialGradient(W / 2, H / 2, 2, W / 2, H / 2, W * 0.3);
+      glow.addColorStop(0, 'rgba(160,255,255,0.95)');
+      glow.addColorStop(1, 'rgba(95,240,255,0.2)');
+      ctx.fillStyle = glow;
+      circle(ctx, W / 2, H / 2, W * 0.3);
+      ctx.fill();
+      const gem = (x: number, y: number, s: number, fill: string) => {
+        ctx.beginPath();
+        ctx.moveTo(x, y - s * 1.6);
+        ctx.lineTo(x + s, y - s * 0.4);
+        ctx.lineTo(x + s * 0.6, y + s * 0.7);
+        ctx.lineTo(x - s * 0.6, y + s * 0.7);
+        ctx.lineTo(x - s, y - s * 0.4);
+        ctx.closePath();
+        fillStroke(ctx, fill, 2);
+      };
+      gem(W / 2 - 12, H / 2 + 6, 8, '#c77dff');
+      gem(W / 2 + 12, H / 2 + 6, 8, '#5ff0ff');
+      gem(W / 2, H / 2, 12, '#7af7ff');
+      break;
+    }
+    case 'flakPosition':
+    case 'rocketBattery': {
+      // Sandsackring
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      circle(ctx, W / 2 + 4, H / 2 + 5, W * 0.44);
+      ctx.fill();
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.ellipse(W / 2 + Math.cos(a) * W * 0.36, H / 2 + Math.sin(a) * W * 0.36, W * 0.1, W * 0.07, a + Math.PI / 2, 0, Math.PI * 2);
+        fillStroke(ctx, '#c9b27a', 2);
+      }
+      circle(ctx, W / 2, H / 2, W * 0.26);
+      fillStroke(ctx, main, 2.5);
+      break;
+    }
     case 'mgTower':
     case 'cannonTower': {
       circle(ctx, W / 2, H / 2, W * 0.42);
@@ -852,6 +1370,12 @@ function drawProjectile(kind: string): HTMLCanvasElement {
       ctx.fillStyle = '#e8483b';
       ctx.fillRect(16, 4, 3, 4);
       break;
+    case 'bomb':
+      rr(ctx, 6, 3, 14, 6, 3);
+      fillStroke(ctx, '#3a3a46', 1.5);
+      ctx.fillStyle = '#c9a04c';
+      ctx.fillRect(4, 2, 3, 8);
+      break;
     case 'shell':
     case 'cannon':
       circle(ctx, 12, 6, kind === 'shell' ? 4.5 : 3.5);
@@ -883,7 +1407,41 @@ export function createCommonTextures(scene: Phaser.Scene): void {
   add('fx_boom', drawBoom());
   add('fx_star', drawStar());
   add('fx_parachute', drawParachute());
-  for (const k of ['bullet', 'rocket', 'cannon', 'shell', 'flak']) add(`proj_${k}`, drawProjectile(k));
+  add('fx_rotor', drawRotor());
+  add('fx_dirt', drawDirt());
+  add('fx_shadow', drawSoftShadow());
+  for (const k of ['bullet', 'rocket', 'cannon', 'shell', 'flak', 'bomb']) add(`proj_${k}`, drawProjectile(k));
+}
+
+/** Weicher Schatten für Flieger. */
+function drawSoftShadow(): HTMLCanvasElement {
+  const [c, ctx] = canvas(64, 64);
+  const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 30);
+  g.addColorStop(0, 'rgba(0,0,0,0.4)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  return c;
+}
+
+/** Erdhügel über einem eingegrabenen Maulwurf. */
+function drawDirt(): HTMLCanvasElement {
+  const [c, ctx] = canvas(56, 56);
+  for (const [x, y, r] of [
+    [28, 30, 16],
+    [18, 26, 9],
+    [38, 24, 8],
+  ] as const) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.75, 0, 0, Math.PI * 2);
+    fillStroke(ctx, '#8a6d4b', 2);
+  }
+  ctx.fillStyle = '#a88a62';
+  for (let i = 0; i < 6; i++) {
+    circle(ctx, 16 + i * 5, 28 + ((i * 7) % 5) - 2, 2);
+    ctx.fill();
+  }
+  return c;
 }
 
 // ───────────── Symbole für die Bauleiste ─────────────
