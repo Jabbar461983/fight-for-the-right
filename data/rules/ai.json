@@ -12,11 +12,20 @@
     "cannonTower",
     "refinery",
     "powerPlant",
+    "techCenter",
+    "airfield",
+    "flakPosition",
+    "powerPlant",
+    "repairStation",
+    "shipyard",
+    "rocketBattery",
+    "bunker",
     "mgTower",
     "cannonTower",
     "barracks",
     "powerPlant",
-    "factory"
+    "factory",
+    "flakPosition"
   ],
   "difficulties": {
     "easy": {
@@ -31,35 +40,94 @@
       "buildOrderLength": 10,
       "reserveCredits": 300,
       "unitMix": { "rifleman": 4, "rocketeer": 2, "lightTank": 3, "artillery": 1 },
-      "maxArmy": 18
+      "islandMix": { "gunship": 2, "patrolBoat": 2 },
+      "maxArmy": 18,
+      "engineers": 0,
+      "expand": false,
+      "twoFronts": false,
+      "repairBuildings": false
     },
     "medium": {
-      "thinkInterval": 1,
-      "firstAttackAfter": 300,
-      "attackInterval": 150,
-      "waveSize": 8,
+      "buildOrder": [
+        "powerPlant", "refinery", "barracks", "powerPlant", "factory", "radar", "mgTower", "powerPlant",
+        "silo", "cannonTower", "techCenter", "airfield", "powerPlant", "repairStation", "flakPosition",
+        "shipyard", "powerPlant", "rocketBattery", "bunker", "cannonTower"
+      ],
+      "thinkInterval": 1.5,
+      "firstAttackAfter": 400,
+      "attackInterval": 180,
+      "waveSize": 7,
       "waveGrowth": 2,
       "maxWaveSize": 20,
       "harvestersPerRefinery": 2,
       "maxRefineries": 2,
-      "buildOrderLength": 14,
-      "reserveCredits": 0,
-      "unitMix": { "rifleman": 3, "rocketeer": 3, "lightTank": 4, "artillery": 2, "flakWagon": 1 },
-      "maxArmy": 30
-    },
-    "hard": {
-      "thinkInterval": 1,
-      "firstAttackAfter": 210,
-      "attackInterval": 110,
-      "waveSize": 10,
-      "waveGrowth": 3,
-      "maxWaveSize": 30,
-      "harvestersPerRefinery": 2,
-      "maxRefineries": 3,
       "buildOrderLength": 17,
       "reserveCredits": 0,
-      "unitMix": { "rifleman": 3, "rocketeer": 3, "lightTank": 5, "artillery": 2, "flakWagon": 1 },
-      "maxArmy": 45
+      "unitMix": {
+        "rifleman": 3,
+        "rocketeer": 3,
+        "lightTank": 4,
+        "artillery": 2,
+        "flakWagon": 1,
+        "gunship": 1,
+        "hoverTank": 2,
+        "shieldBearer": 1,
+        "jetpackRanger": 1,
+        "colossus": 1
+      },
+      "islandMix": { "gunship": 3, "patrolBoat": 2, "missileBoat": 2, "steamCruiser": 1, "bomberAirship": 1 },
+      "maxArmy": 30,
+      "engineers": 1,
+      "expand": false,
+      "twoFronts": false,
+      "repairBuildings": true,
+      "attackAdvantage": 0
+    },
+    "hard": {
+      "buildOrder": [
+        "powerPlant", "refinery", "barracks", "powerPlant", "factory", "radar", "mgTower", "powerPlant",
+        "silo", "cannonTower", "techCenter", "airfield", "powerPlant", "factory", "repairStation",
+        "flakPosition", "powerPlant", "rocketBattery", "bunker", "shipyard", "barracks", "cannonTower",
+        "flakPosition", "powerPlant", "airfield", "mgTower"
+      ],
+      "thinkInterval": 1,
+      "firstAttackAfter": 460,
+      "attackInterval": 150,
+      "waveSize": 12,
+      "waveGrowth": 3,
+      "maxWaveSize": 32,
+      "harvestersPerRefinery": 2,
+      "maxRefineries": 3,
+      "buildOrderLength": 26,
+      "reserveCredits": 0,
+      "unitMix": {
+        "rifleman": 3,
+        "rocketeer": 2,
+        "lightTank": 6,
+        "artillery": 1,
+        "flakWagon": 1,
+        "gunship": 2,
+        "hoverTank": 3,
+        "cometFighter": 1,
+        "jetpackRanger": 2,
+        "shieldBearer": 2,
+        "colossus": 2,
+        "bomberAirship": 1
+      },
+      "islandMix": {
+        "gunship": 3,
+        "cometFighter": 2,
+        "bomberAirship": 2,
+        "patrolBoat": 2,
+        "missileBoat": 3,
+        "steamCruiser": 2
+      },
+      "maxArmy": 45,
+      "engineers": 2,
+      "expand": true,
+      "twoFronts": true,
+      "repairBuildings": true,
+      "attackAdvantage": 1.0
     }
   }
 }

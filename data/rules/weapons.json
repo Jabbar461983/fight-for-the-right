@@ -71,6 +71,133 @@
       "projectile": "cannon",
       "projectileSpeed": 15,
       "targets": "ground"
+    },
+    {
+      "id": "flakCannon",
+      "damage": 26,
+      "versus": { "infantry": 0, "light": 0, "heavy": 0, "building": 0, "air": 100 },
+      "range": 7.5,
+      "reload": 0.5,
+      "projectile": "flak",
+      "projectileSpeed": 18,
+      "targets": "air"
+    },
+    {
+      "id": "gunshipRockets",
+      "damage": 34,
+      "versus": { "infantry": 50, "light": 100, "heavy": 90, "building": 50, "air": 0 },
+      "range": 5,
+      "reload": 1.8,
+      "projectile": "rocket",
+      "projectileSpeed": 10,
+      "targets": "ground"
+    },
+    {
+      "id": "patrolGun",
+      "damage": 20,
+      "versus": { "infantry": 100, "light": 70, "heavy": 35, "building": 30, "air": 0 },
+      "range": 5,
+      "reload": 0.8,
+      "projectile": "bullet",
+      "projectileSpeed": 18,
+      "targets": "ground"
+    },
+    {
+      "id": "jetMissiles",
+      "damage": 90,
+      "versus": { "infantry": 30, "light": 100, "heavy": 100, "building": 60, "air": 100 },
+      "range": 5,
+      "reload": 0.6,
+      "projectile": "rocket",
+      "projectileSpeed": 14,
+      "targets": "both"
+    },
+    {
+      "id": "airshipBomb",
+      "damage": 120,
+      "versus": { "infantry": 80, "light": 90, "heavy": 100, "building": 150, "air": 0 },
+      "range": 1.4,
+      "reload": 3,
+      "projectile": "bomb",
+      "projectileSpeed": 4,
+      "splash": 1.5,
+      "targets": "ground"
+    },
+    {
+      "id": "coastRockets",
+      "damage": 60,
+      "versus": { "infantry": 60, "light": 90, "heavy": 80, "building": 120, "air": 0 },
+      "range": 10,
+      "minRange": 3,
+      "reload": 3.2,
+      "projectile": "rocket",
+      "projectileSpeed": 9,
+      "splash": 0.8,
+      "targets": "ground"
+    },
+    {
+      "id": "cruiserCannon",
+      "damage": 80,
+      "versus": { "infantry": 70, "light": 100, "heavy": 100, "building": 110, "air": 0 },
+      "range": 9,
+      "minRange": 2,
+      "reload": 3,
+      "projectile": "shell",
+      "projectileSpeed": 7,
+      "splash": 1,
+      "targets": "ground"
+    },
+    {
+      "id": "twinCannon",
+      "damage": 60,
+      "versus": { "infantry": 60, "light": 100, "heavy": 100, "building": 70, "air": 0 },
+      "range": 5,
+      "reload": 1.6,
+      "projectile": "cannon",
+      "projectileSpeed": 14,
+      "targets": "ground"
+    },
+    {
+      "id": "jetpackGun",
+      "damage": 15,
+      "versus": { "infantry": 100, "light": 35, "heavy": 15, "building": 15, "air": 30 },
+      "range": 4,
+      "reload": 0.8,
+      "projectile": "bullet",
+      "projectileSpeed": 18,
+      "targets": "both"
+    },
+    {
+      "id": "hoverCannon",
+      "damage": 26,
+      "versus": { "infantry": 90, "light": 100, "heavy": 55, "building": 45, "air": 0 },
+      "range": 4.5,
+      "reload": 1.3,
+      "projectile": "cannon",
+      "projectileSpeed": 14,
+      "targets": "ground"
+    },
+    {
+      "id": "shieldPistol",
+      "damage": 10,
+      "versus": { "infantry": 100, "light": 25, "heavy": 10, "building": 10, "air": 0 },
+      "range": 3.5,
+      "reload": 1.0,
+      "projectile": "bullet",
+      "projectileSpeed": 18,
+      "targets": "ground"
+    },
+    {
+      "id": "rocketBattery",
+      "damage": 70,
+      "versus": { "infantry": 60, "light": 100, "heavy": 100, "building": 80, "air": 60 },
+      "range": 12,
+      "minRange": 3.5,
+      "reload": 4,
+      "projectile": "rocket",
+      "projectileSpeed": 9,
+      "splash": 1,
+      "targets": "both"
     }
   ]
 }

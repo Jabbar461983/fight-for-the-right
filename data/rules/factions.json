@@ -4,13 +4,13 @@
       "id": "aero",
       "nameKey": "faction.aero",
       "palette": { "main": "#e8eef5", "second": "#5ab4ff", "metal": "#a9c4d6", "dark": "#2b4a66" },
-      "unitModifiers": { "cost": 0.9, "speed": 1.12, "hp": 0.9, "buildTime": 0.9 }
+      "unitModifiers": { "cost": 0.95, "speed": 1.12, "hp": 0.9, "buildTime": 0.95 }
     },
     {
       "id": "granite",
       "nameKey": "faction.granite",
       "palette": { "main": "#c8a24a", "second": "#6b863e", "metal": "#c29a46", "dark": "#4a3b22" },
-      "unitModifiers": { "cost": 1.1, "speed": 0.9, "hp": 1.18, "buildTime": 1.1 }
+      "unitModifiers": { "cost": 1.05, "speed": 0.9, "hp": 1.22, "buildTime": 1.0 }
     }
   ]
 }
