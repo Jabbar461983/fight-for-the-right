@@ -56,6 +56,7 @@ export interface HudActions {
   surrender(): void;
   toMenu(): void;
   playAgain(): void;
+  sendPing(kind: 'help' | 'attack'): void;
 }
 
 const ICONS = {
@@ -121,11 +122,14 @@ export class Hud {
   private lastCmdKey = '';
   private cleanup: (() => void)[] = [];
 
+  private connection: HTMLElement;
+
   constructor(
     private readonly sidebar: HTMLElement,
     private readonly commandBar: HTMLElement,
     private readonly stage: HTMLElement,
     private readonly actions: HudActions,
+    private readonly multiplayer = false,
   ) {
     this.buildSidebar();
     this.minimap = sidebar.querySelector('#minimap')!;
@@ -134,6 +138,8 @@ export class Hud {
     this.bubble.hidden = true;
     this.overlay = this.addToStage('div', 'game-overlay');
     this.overlay.hidden = true;
+    this.connection = this.addToStage('div', 'connection-banner');
+    this.connection.hidden = true;
     applyI18n(document);
     onLangChange(() => {
       this.renderedTabKey = '';
@@ -183,6 +189,14 @@ export class Hud {
         <nav class="tabs">${BUILD_TABS.map((tb) => `<button type="button" data-tab="${tb}" data-i18n="tab.${tb}"></button>`).join('')}</nav>
         <div class="build-grid" id="build-grid"></div>
         <p class="place-hint" id="place-hint" hidden data-i18n="hud.placeHint"></p>
+        ${
+          this.multiplayer
+            ? `<section class="panel row pings">
+          <button type="button" data-ping="help" data-i18n="ping.help"></button>
+          <button type="button" data-ping="attack" data-i18n="ping.attack"></button>
+        </section>`
+            : ''
+        }
         <section class="panel">
           <h2 id="selection-title"></h2>
           <ul id="selection-list"></ul>
@@ -209,6 +223,13 @@ export class Hud {
     }
 
     sb.querySelector('.sb-toggle')!.addEventListener('click', () => sb.classList.toggle('collapsed'));
+    sb.querySelectorAll<HTMLButtonElement>('[data-ping]').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.actions.sendPing(b.dataset.ping as 'help' | 'attack');
+        // Auf dem Handy die Leiste schliessen, damit man auf die Karte tippen kann
+        if (b.dataset.ping === 'attack') sb.classList.add('collapsed');
+      }),
+    );
     sb.querySelector('#pause-btn')!.addEventListener('click', () => this.actions.pause());
     sb.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) =>
       b.addEventListener('click', () => {
@@ -471,13 +492,15 @@ export class Hud {
 
   showPause(): void {
     this.overlay.hidden = false;
+    // Im Mehrspieler läuft das Spiel weiter – nur Aufgeben oder Verlassen
     this.overlay.innerHTML = `
       <div class="menu-card">
-        <h2 data-i18n="pause.title"></h2>
+        <h2 data-i18n="${this.multiplayer ? 'pause.mpTitle' : 'pause.title'}"></h2>
+        ${this.multiplayer ? '<p class="muted" data-i18n="pause.mpHint"></p>' : ''}
         <div class="menu-buttons">
-          <button type="button" class="primary" data-act="resume" data-i18n="pause.resume"></button>
+          <button type="button" class="primary" data-act="resume" data-i18n="${this.multiplayer ? 'pause.back' : 'pause.resume'}"></button>
           <button type="button" data-act="surrender" data-i18n="pause.surrender"></button>
-          <button type="button" data-act="menu" data-i18n="pause.mainMenu"></button>
+          <button type="button" data-act="menu" data-i18n="${this.multiplayer ? 'pause.leave' : 'pause.mainMenu'}"></button>
         </div>
       </div>`;
     applyI18n(this.overlay);
@@ -520,11 +543,18 @@ export class Hud {
             .join('')}</tbody>
         </table></div>
         <div class="menu-actions">
-          <button type="button" data-act="menu">${t('end.menu')}</button>
-          <button type="button" class="primary big" data-act="again">${t('end.again')}</button>
+          <button type="button" ${this.multiplayer ? 'class="primary big"' : ''} data-act="menu">${t('end.menu')}</button>
+          ${this.multiplayer ? '' : `<button type="button" class="primary big" data-act="again">${t('end.again')}</button>`}
         </div>
       </div>`;
     this.overlay.querySelector('[data-act="menu"]')!.addEventListener('click', () => this.actions.toMenu());
-    this.overlay.querySelector('[data-act="again"]')!.addEventListener('click', () => this.actions.playAgain());
+    this.overlay.querySelector('[data-act="again"]')?.addEventListener('click', () => this.actions.playAgain());
+  }
+
+  /** Hinweis bei Verbindungsproblemen (Mehrspieler). */
+  setConnection(state: 'ok' | 'dropped' | 'lost'): void {
+    this.connection.hidden = state === 'ok';
+    this.connection.textContent = state === 'dropped' ? t('mp.reconnecting') : state === 'lost' ? t('mp.err.lost') : '';
+    this.connection.classList.toggle('lost', state === 'lost');
   }
 }
