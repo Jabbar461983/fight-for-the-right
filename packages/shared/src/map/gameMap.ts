@@ -35,6 +35,10 @@ const MOVE_CLASS_COUNT = 5;
 export class GameMap {
   /** Zusammenhangskomponenten je Bewegungsklasse (lazy berechnet). */
   private components: (Int32Array | undefined)[] = new Array(MOVE_CLASS_COUNT);
+  /** Von Gebäuden belegte Kacheln (für Bodeneinheiten unpassierbar). */
+  readonly blocked: Uint8Array;
+  /** Zählt Änderungen der Passierbarkeit (für Caches wie Flussfelder). */
+  version = 0;
 
   constructor(
     readonly width: number,
@@ -46,6 +50,21 @@ export class GameMap {
     if (terrain.length !== width * height) {
       throw new Error(`Kartengrösse passt nicht: ${width}x${height} ≠ ${terrain.length}`);
     }
+    this.blocked = new Uint8Array(width * height);
+  }
+
+  /** Belegt (value=1) oder räumt (value=0) ein Rechteck – z.B. für ein Gebäude. */
+  setBlocked(tx: number, ty: number, w: number, h: number, value: 0 | 1): void {
+    for (let y = ty; y < ty + h; y++) {
+      for (let x = tx; x < tx + w; x++) {
+        if (this.inBounds(x, y)) this.blocked[y * this.width + x] = value;
+      }
+    }
+    this.invalidateCaches();
+  }
+
+  isBlocked(tx: number, ty: number): boolean {
+    return this.inBounds(tx, ty) && this.blocked[ty * this.width + tx] !== 0;
   }
 
   /** Breite in Welteinheiten. */
@@ -73,7 +92,9 @@ export class GameMap {
   /** Tempo in Prozent auf dieser Kachel, 0 = unpassierbar oder ausserhalb. */
   speedAt(tx: number, ty: number, cls: MoveClass): number {
     if (!this.inBounds(tx, ty)) return 0;
-    return speedPercent(cls, this.terrain[ty * this.width + tx]);
+    const i = ty * this.width + tx;
+    if (this.blocked[i] !== 0 && cls !== MoveClass.Air) return 0;
+    return speedPercent(cls, this.terrain[i]);
   }
 
   passable(tx: number, ty: number, cls: MoveClass): boolean {
@@ -120,6 +141,7 @@ export class GameMap {
   /** Muss aufgerufen werden, wenn sich die Passierbarkeit ändert (z.B. Gebäude gebaut). */
   invalidateCaches(): void {
     this.components = new Array(MOVE_CLASS_COUNT);
+    this.version++;
   }
 
   private buildComponents(cls: MoveClass): Int32Array {

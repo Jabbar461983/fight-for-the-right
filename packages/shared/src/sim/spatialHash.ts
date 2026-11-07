@@ -36,6 +36,20 @@ export class SpatialHash {
     return cy * this.cols + cx;
   }
 
+  /** Ruft fn für alle Einträge in Zellen auf, die den Kreis (x,y,r) berühren (grob, ohne Abstandsprüfung). */
+  forRadius(x: number, y: number, r: number, fn: (i: number) => void): void {
+    const s = this.cellSize;
+    const x0 = Math.max(0, Math.floor((x - r) / s));
+    const x1 = Math.min(this.cols - 1, Math.floor((x + r) / s));
+    const y0 = Math.max(0, Math.floor((y - r) / s));
+    const y1 = Math.min(this.rows - 1, Math.floor((y + r) / s));
+    for (let yy = y0; yy <= y1; yy++) {
+      for (let xx = x0; xx <= x1; xx++) {
+        for (let i = this.head[yy * this.cols + xx]; i !== -1; i = this.next[i]) fn(i);
+      }
+    }
+  }
+
   /** Ruft fn für alle Einträge in den 3×3 Zellen um (x,y) auf. */
   forNeighbors(x: number, y: number, fn: (i: number) => void): void {
     const cx = Math.min(this.cols - 1, Math.max(0, Math.floor(x / this.cellSize)));

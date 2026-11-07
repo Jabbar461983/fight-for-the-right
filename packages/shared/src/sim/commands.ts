@@ -1,27 +1,51 @@
+import { z } from 'zod';
+import { PRODUCTION_CATEGORIES } from '../data/rules';
+import { STANCES } from './unit';
+
 /**
  * Befehle, die ein Spieler an die Simulation schickt.
  * Im Multiplayer sind das genau die Nachrichten, die über das Netz gehen.
- * Koordinaten in Welteinheiten.
+ * Koordinaten in Welteinheiten (x/y) bzw. Kacheln (tx/ty).
  */
-export type Command =
-  | { type: 'move'; units: number[]; x: number; y: number }
-  | { type: 'stop'; units: number[] };
 
 /** Höchstzahl Einheiten pro Befehl (Schutz vor Missbrauch). */
 export const MAX_UNITS_PER_COMMAND = 500;
 
-/** Prüft die Form eines Befehls (Typen, Grenzen). Besitzrechte prüft die Simulation. */
-export function isWellFormedCommand(cmd: unknown): cmd is Command {
-  if (typeof cmd !== 'object' || cmd === null) return false;
-  const c = cmd as Record<string, unknown>;
-  if (!Array.isArray(c.units) || c.units.length === 0 || c.units.length > MAX_UNITS_PER_COMMAND) return false;
-  if (!c.units.every((u) => Number.isInteger(u) && (u as number) > 0)) return false;
-  switch (c.type) {
-    case 'move':
-      return Number.isInteger(c.x) && Number.isInteger(c.y);
-    case 'stop':
-      return true;
-    default:
-      return false;
-  }
+const Id = z.number().int().positive();
+const Ids = z.array(Id).min(1).max(MAX_UNITS_PER_COMMAND);
+const Coord = z.number().int().min(-1_000_000).max(10_000_000);
+const TileCoord = z.number().int().min(0).max(4096);
+
+export const CommandSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('move'), units: Ids, x: Coord, y: Coord }),
+  z.object({ type: z.literal('attackMove'), units: Ids, x: Coord, y: Coord }),
+  z.object({ type: z.literal('attack'), units: Ids, target: Id }),
+  z.object({ type: z.literal('stop'), units: Ids }),
+  z.object({ type: z.literal('stance'), units: Ids, stance: z.enum(STANCES) }),
+  /** Sammler zu einem Kristallfeld schicken. */
+  z.object({ type: z.literal('harvest'), units: Ids, tx: TileCoord, ty: TileCoord }),
+  /** Sammler zu einer bestimmten Raffinerie schicken. */
+  z.object({ type: z.literal('dock'), units: Ids, target: Id }),
+  /** Ingenieur betritt ein Gebäude (übernehmen bzw. reparieren). */
+  z.object({ type: z.literal('enter'), units: Ids, target: Id }),
+  /** Bauwagen ausfahren. */
+  z.object({ type: z.literal('deploy'), units: Ids }),
+  z.object({
+    type: z.literal('queue'),
+    category: z.enum(PRODUCTION_CATEGORIES),
+    item: z.string().max(40),
+    action: z.enum(['add', 'pause', 'cancel']),
+  }),
+  z.object({ type: z.literal('place'), category: z.enum(['building', 'defense']), tx: TileCoord, ty: TileCoord }),
+  z.object({ type: z.literal('sell'), building: Id }),
+  z.object({ type: z.literal('repair'), building: Id }),
+  z.object({ type: z.literal('surrender') }),
+]);
+
+export type Command = z.infer<typeof CommandSchema>;
+
+/** Prüft die Form eines Befehls. Besitzrechte prüft die Simulation. */
+export function parseCommand(cmd: unknown): Command | null {
+  const r = CommandSchema.safeParse(cmd);
+  return r.success ? r.data : null;
 }

@@ -83,7 +83,14 @@ export class FlowFieldCache {
     private readonly maxEntries = 16,
   ) {}
 
+  private version = -1;
+
   get(cls: MoveClass, tx: number, ty: number): FlowField {
+    // Hat sich die Karte verändert (neues Gebäude), sind alle Felder veraltet.
+    if (this.map.version !== this.version) {
+      this.fields.clear();
+      this.version = this.map.version;
+    }
     const key = `${cls}:${tx}:${ty}`;
     let f = this.fields.get(key);
     if (f) {
