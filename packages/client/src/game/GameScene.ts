@@ -1,8 +1,11 @@
 import * as Phaser from 'phaser';
 import {
+  NetIndex,
   STANCES,
+  Simulation,
   TICK_MS,
   TILE_PX,
+  applySnapshot,
   availability,
   canPlace,
   createSkirmish,
@@ -12,12 +15,14 @@ import {
   type Building,
   type BuildingDef,
   type Ghost,
+  type PingKind,
   type Rules,
   type SimEvent,
-  type Simulation,
+  type Snapshot,
   type Unit,
   type UnitDef,
 } from '@fftr/shared';
+import type { NetSession, PingMessage } from '../net/NetSession';
 import { getRules, loadMap } from '../data';
 import { t } from '../i18n';
 import { InputController, type InputTarget } from '../input/InputController';
@@ -126,6 +131,14 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   private lastLostMsg = 0;
   private debug = false;
 
+  // Mehrspieler
+  private net: NetSession | null = null;
+  private netIndex: NetIndex | null = null;
+  private lastSnapAt = 0;
+  private snapInterval = TICK_MS * 2;
+  private pingArmed = false;
+  private pings: { x: number; y: number; age: number; kind: PingKind }[] = [];
+
   constructor() {
     super('game');
   }
@@ -151,13 +164,35 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     this.paused = false;
     this.ended = false;
     this.lastEventPos = null;
+    this.net = data.config.net ?? null;
+    this.netIndex = null;
+    this.pingArmed = false;
+    this.pings = [];
+  }
+
+  /** Befehl an die Simulation – lokal oder über das Netz an den Server. */
+  private issue(cmd: object): void {
+    if (this.net) this.net.send('cmd', cmd);
+    else this.sim.issue(this.local, cmd);
   }
 
   create(): void {
     this.debug = new URLSearchParams(location.search).has('debug');
     this.rules = getRules();
     const map = loadMap(this.cfg.mapId);
-    this.sim = createSkirmish({ map, rules: this.rules, slots: this.cfg.slots, startCredits: this.cfg.startCredits });
+    if (this.net) {
+      // Mehrspieler: Spiegel-Simulation, die nur Momentaufnahmen vom Server anzeigt
+      this.sim = new Simulation({
+        map,
+        rules: this.rules,
+        victory: 'none',
+        players: this.cfg.slots.map((s) => ({ id: s.id, faction: s.faction, team: s.team, color: s.color, name: s.name })),
+      });
+      this.netIndex = new NetIndex(this.sim);
+      this.snapInterval = (TICK_MS * 2) / (this.cfg.speed ?? 1);
+    } else {
+      this.sim = createSkirmish({ map, rules: this.rules, slots: this.cfg.slots, startCredits: this.cfg.startCredits });
+    }
 
     createCommonTextures(this);
     this.buildTerrain();
@@ -175,10 +210,17 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     if (mine) cam.centerOn(unitsToPx(mine.x), unitsToPx(mine.y));
 
     this.controls = new InputController(document.getElementById('game')!, document.getElementById('dragbox')!, this);
-    this.hud = new Hud(document.getElementById('sidebar')!, document.getElementById('commandbar')!, document.getElementById('stage')!, this);
+    this.hud = new Hud(document.getElementById('sidebar')!, document.getElementById('commandbar')!, document.getElementById('stage')!, this, !!this.net);
     this.prepareMinimap();
     this.scale.on('resize', this.clampCamera, this);
     this.events.once('shutdown', () => this.teardown());
+
+    // Mehrspieler: erst jetzt Momentaufnahmen annehmen (die Oberfläche existiert)
+    if (this.net) {
+      this.net.setSnapshotHandler((s) => this.onSnapshot(s));
+      this.net.onPing = (p) => this.onPing(p);
+      this.net.onConnection = (state) => this.onConnection(state);
+    }
 
     // Gleich den Bauwagen auswählen, damit Neulinge wissen, wo es losgeht
     const wagon = this.sim.units.find((u) => u.owner === this.local && u.def.deploysTo);
@@ -190,6 +232,11 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   }
 
   private teardown(): void {
+    if (this.net) {
+      this.net.setSnapshotHandler(null);
+      this.net.onPing = null;
+      this.net.onConnection = null;
+    }
     this.controls.destroy();
     this.hud.destroy();
     this.scale.off('resize', this.clampCamera, this);
@@ -321,18 +368,24 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     this.controls.update(delta);
     const dt = delta / 1000;
 
-    if (!this.paused && !this.ended) {
-      this.accumulator += Math.min(delta, 250) * getSettings().gameSpeed;
-      let steps = 0;
-      while (this.accumulator >= TICK_MS && steps < 6) {
-        this.sim.step();
-        this.handleEvents(this.sim.drainEvents());
-        this.accumulator -= TICK_MS;
-        steps++;
+    let alpha: number;
+    if (this.net) {
+      // Mehrspieler: der Server rechnet; wir interpolieren zwischen den Momentaufnahmen
+      alpha = Math.min(1, (performance.now() - this.lastSnapAt) / this.snapInterval);
+    } else {
+      if (!this.paused && !this.ended) {
+        this.accumulator += Math.min(delta, 250) * getSettings().gameSpeed;
+        let steps = 0;
+        while (this.accumulator >= TICK_MS && steps < 6) {
+          this.sim.step();
+          this.handleEvents(this.sim.drainEvents());
+          this.accumulator -= TICK_MS;
+          steps++;
+        }
+        if (steps === 6) this.accumulator = 0;
       }
-      if (steps === 6) this.accumulator = 0;
+      alpha = this.paused ? 1 : Math.min(1, this.accumulator / TICK_MS);
     }
-    const alpha = this.paused ? 1 : Math.min(1, this.accumulator / TICK_MS);
 
     this.syncUnits(alpha, dt);
     this.syncBuildings(dt);
@@ -632,6 +685,17 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       }
     }
 
+    // Pings von Verbündeten: pulsierende Ringe
+    this.pings = this.pings.filter((p) => (p.age += dt) < 4);
+    for (const p of this.pings) {
+      const color = p.kind === 'help' ? 0xffcf4a : 0xff3b3b;
+      for (let k = 0; k < 2; k++) {
+        const phase = ((p.age + k * 0.5) % 1) / 1;
+        g.lineStyle(3, color, 1 - phase);
+        g.strokeCircle(p.x, p.y, 10 + phase * 40);
+      }
+    }
+
     // Bewegungsmarker
     this.markers = this.markers.filter((m) => (m.age += dt) < 0.6);
     for (const m of this.markers) {
@@ -728,6 +792,14 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       if (v && !v.visible) continue;
       ctx.fillStyle = hex(this.colorOf(u.owner));
       ctx.fillRect(tileOf(u.x) * sx - 0.5, tileOf(u.y) * sy - 0.5, Math.max(2, sx), Math.max(2, sy));
+    }
+    // Pings
+    for (const pg of this.pings) {
+      ctx.strokeStyle = pg.kind === 'help' ? '#ffcf4a' : '#ff3b3b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc((pg.x / TILE_PX) * sx, (pg.y / TILE_PX) * sy, 4 + (pg.age % 1) * 6, 0, Math.PI * 2);
+      ctx.stroke();
     }
     // Kamera-Rahmen
     const view = this.cameras.main.worldView;
@@ -976,7 +1048,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const x = pxToUnits(p.x);
     const y = pxToUnits(p.y);
     const ids = (list: Unit[]) => list.map((u) => u.id);
-    const issue = (cmd: object) => this.sim.issue(this.local, cmd);
+    const issue = (cmd: object) => this.issue(cmd);
 
     if (this.armed) {
       this.armed = false;
@@ -1028,6 +1100,10 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
   leftClick(sx: number, sy: number, shift: boolean): void {
     this.lastPointerTouch = false;
+    if (this.pingArmed) {
+      this.pingAt(sx, sy);
+      return;
+    }
     if (this.placing) {
       this.hover(sx, sy);
       this.confirmPlacement();
@@ -1060,6 +1136,10 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
   tap(sx: number, sy: number): void {
     this.lastPointerTouch = true;
+    if (this.pingArmed) {
+      this.pingAt(sx, sy);
+      return;
+    }
     if (this.placing) {
       const tile = this.tileAt(sx, sy);
       if (this.placeTile && this.placeTile.tx === tile.tx && this.placeTile.ty === tile.ty) this.confirmPlacement();
@@ -1149,7 +1229,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
   stop(): void {
     const units = this.selectedUnits();
-    if (units.length) this.sim.issue(this.local, { type: 'stop', units: units.map((u) => u.id) });
+    if (units.length) this.issue({ type: 'stop', units: units.map((u) => u.id) });
   }
 
   armAttack(): void {
@@ -1163,7 +1243,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const armed = this.selectedUnits().filter((u) => u.def.weapon);
     if (!armed.length) return;
     const next = STANCES[(STANCES.indexOf(armed[0].stance) + 1) % STANCES.length];
-    this.sim.issue(this.local, { type: 'stance', units: armed.map((u) => u.id), stance: next });
+    this.issue({ type: 'stance', units: armed.map((u) => u.id), stance: next });
     // Sofort anzeigen (der Befehl wirkt im nächsten Tick)
     for (const u of armed) u.stance = next;
     this.hud.message(t(`stance.${next}`), 'info');
@@ -1172,17 +1252,17 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
   deploy(): void {
     const wagons = this.selectedUnits().filter((u) => u.def.deploysTo);
-    if (wagons.length) this.sim.issue(this.local, { type: 'deploy', units: wagons.map((u) => u.id) });
+    if (wagons.length) this.issue({ type: 'deploy', units: wagons.map((u) => u.id) });
   }
 
   sellSelected(): void {
-    if (this.selectedBuilding) this.sim.issue(this.local, { type: 'sell', building: this.selectedBuilding });
+    if (this.selectedBuilding) this.issue({ type: 'sell', building: this.selectedBuilding });
     this.selectedBuilding = 0;
     this.updateHud();
   }
 
   repairSelected(): void {
-    if (this.selectedBuilding) this.sim.issue(this.local, { type: 'repair', building: this.selectedBuilding });
+    if (this.selectedBuilding) this.issue({ type: 'repair', building: this.selectedBuilding });
     this.time.delayedCall(100, () => this.updateHud());
   }
 
@@ -1201,7 +1281,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
   buildItem(category: BuildTab, id: string, action: 'click' | 'alt'): void {
     const p = this.sim.players[this.local];
-    const issue = (a: 'add' | 'pause' | 'cancel') => this.sim.issue(this.local, { type: 'queue', category, item: id, action: a });
+    const issue = (a: 'add' | 'pause' | 'cancel') => this.issue({ type: 'queue', category, item: id, action: a });
     const isBuilding = category === 'building' || category === 'defense';
     const ready = isBuilding && p.ready[category] === id;
     const queued = p.queues[category].filter((q) => q.defId === id);
@@ -1254,7 +1334,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       this.hud.message(t('msg.cannotPlace'), 'warn');
       return;
     }
-    this.sim.issue(this.local, { type: 'place', category, tx, ty });
+    this.issue({ type: 'place', category, tx, ty });
     this.cancelPlacement();
   }
 
@@ -1283,12 +1363,73 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   }
 
   surrender(): void {
-    this.sim.issue(this.local, { type: 'surrender' });
+    this.issue({ type: 'surrender' });
     this.resume();
   }
 
   toMenu(): void {
+    if (this.net) void this.net.leave();
     this.onExit();
+  }
+
+  // ───────────────────────────── Mehrspieler ─────────────────────────────
+
+  private onSnapshot(s: Snapshot): void {
+    if (!this.netIndex) return;
+    const first = this.sim.units.length === 0 && this.sim.buildings.length === 0;
+    applySnapshot(this.sim, s, this.netIndex, this.local);
+    this.lastSnapAt = performance.now();
+    this.handleEvents(this.sim.drainEvents());
+    if (s.full) this.updateFog();
+    if (first) {
+      // Erste Aufnahme: Kamera zur eigenen Basis, Bauwagen auswählen
+      const mine = this.sim.units.filter((u) => u.owner === this.local);
+      const anchor = this.sim.buildings.find((b) => b.owner === this.local) ?? mine[0];
+      if (anchor) this.centerOnWorldPx(unitsToPx(anchor.x), unitsToPx(anchor.y));
+      const wagon = mine.find((u) => u.def.deploysTo);
+      if (wagon) this.selectUnitsOnly([wagon.id]);
+    }
+  }
+
+  /** Schnellnachricht: «Hilfe!» sofort an der Auswahl/Bildmitte, «Angriff hier» per Antippen der Karte. */
+  sendPing(kind: PingKind): void {
+    if (!this.net) return;
+    if (kind === 'attack') {
+      this.pingArmed = true;
+      this.hud.message(t('ping.tapMap'), 'info');
+      return;
+    }
+    const units = this.selectedUnits();
+    let x: number;
+    let y: number;
+    if (units.length) {
+      x = units.reduce((s, u) => s + u.x, 0) / units.length;
+      y = units.reduce((s, u) => s + u.y, 0) / units.length;
+    } else {
+      const v = this.cameras.main.worldView;
+      x = pxToUnits(v.centerX);
+      y = pxToUnits(v.centerY);
+    }
+    this.net.send('ping', { kind, x: Math.round(x), y: Math.round(y) });
+  }
+
+  private pingAt(sx: number, sy: number): void {
+    this.pingArmed = false;
+    const p = this.screenToWorld(sx, sy);
+    this.net?.send('ping', { kind: 'attack', x: pxToUnits(p.x), y: pxToUnits(p.y) });
+  }
+
+  private onPing(p: PingMessage): void {
+    this.pings.push({ x: unitsToPx(p.x), y: unitsToPx(p.y), age: 0, kind: p.kind });
+    this.lastEventPos = { x: p.x, y: p.y };
+    this.hud.message(`${p.from}: ${t(`ping.${p.kind}`)}`, p.kind === 'help' ? 'warn' : 'info', p.player !== this.local);
+  }
+
+  private onConnection(state: 'ok' | 'dropped' | 'lost'): void {
+    this.hud.setConnection(state);
+    if (state === 'lost' && !this.ended) {
+      this.time.delayedCall(4000, () => this.onExit());
+    }
   }
 
   playAgain(): void {
