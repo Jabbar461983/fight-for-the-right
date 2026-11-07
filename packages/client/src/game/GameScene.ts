@@ -107,6 +107,9 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   private mission: Mission | null = null;
   private missionEndKey: string | undefined;
   private lastCountdown = -1;
+  /** Minikarten-Nebel (1 Pixel je Kachel). */
+  private mmFog: HTMLCanvasElement | null = null;
+  private mmFogData: ImageData | null = null;
   private sim!: Simulation;
   private rules!: Rules;
   private local = 1;
@@ -872,13 +875,17 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       const tx = c.idx % m.width;
       ctx.fillRect(tx * sx, ((c.idx - tx) / m.width) * sy, Math.max(1, sx), Math.max(1, sy));
     }
-    // Nebel
-    for (let i = 0; i < p.explored.length; i++) {
-      if (p.visible[i]) continue;
-      const tx = i % m.width;
-      ctx.fillStyle = p.explored[i] ? 'rgba(0,0,0,0.5)' : '#000';
-      ctx.fillRect(tx * sx, ((i - tx) / m.width) * sy, Math.ceil(sx), Math.ceil(sy));
+    // Nebel: ein Pixel je Kachel in einem kleinen Bild, dann skaliert (schnell auch auf Tablets)
+    if (!this.mmFog || this.mmFog.width !== m.width || this.mmFog.height !== m.height) {
+      this.mmFog = document.createElement('canvas');
+      this.mmFog.width = m.width;
+      this.mmFog.height = m.height;
+      this.mmFogData = this.mmFog.getContext('2d')!.createImageData(m.width, m.height);
     }
+    const fogPx = this.mmFogData!.data;
+    for (let i = 0; i < p.explored.length; i++) fogPx[i * 4 + 3] = p.visible[i] ? 0 : p.explored[i] ? 128 : 255;
+    this.mmFog.getContext('2d')!.putImageData(this.mmFogData!, 0, 0);
+    ctx.drawImage(this.mmFog, 0, 0, mm.width, mm.height);
     const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
     for (const b of this.sim.buildings) {
       if (!this.sim.isAlly(this.local, b.owner) && !this.sim.canSee(this.local, b) && !p.ghosts.has(b.id)) continue;

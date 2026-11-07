@@ -64,7 +64,8 @@ export class Movement {
       const goal = resolveGoal(this.map, cls, { tx: tileOf(first.x), ty: tileOf(first.y) }, { tx: tileOf(x), ty: tileOf(y) });
       if (!goal) continue;
       const slots = collectSlots(this.map, cls, goal, group.length);
-      const field = this.flowFields.get(cls, goal.tx, goal.ty);
+      const starts = group.map((u) => this.map.index(tileOf(u.x), tileOf(u.y)));
+      const field = this.flowFields.get(cls, goal.tx, goal.ty, starts);
       const groupRadius = TILE * (1 + isqrt(group.length));
       // Jedem Platz (innen zuerst) die nächstgelegene freie Einheit zuordnen.
       const free = [...group];

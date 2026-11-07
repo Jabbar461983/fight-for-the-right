@@ -141,32 +141,52 @@ export class GameMap {
   /** Muss aufgerufen werden, wenn sich die Passierbarkeit ändert (z.B. Gebäude gebaut). */
   invalidateCaches(): void {
     this.components = new Array(MOVE_CLASS_COUNT);
+    this.speedGrids = new Array(MOVE_CLASS_COUNT);
     this.version++;
+  }
+
+  private speedGrids: (Uint8Array | undefined)[] = new Array(MOVE_CLASS_COUNT);
+
+  /**
+   * Tempo (Prozent, 0 = unpassierbar) aller Kacheln für eine Bewegungsklasse, zwischengespeichert.
+   * Für schnelle innere Schleifen (Flussfelder, Komponenten) – gleiche Werte wie speedAt().
+   */
+  speedGrid(cls: MoveClass): Uint8Array {
+    let g = this.speedGrids[cls];
+    if (!g) {
+      g = new Uint8Array(this.width * this.height);
+      for (let i = 0; i < g.length; i++) g[i] = this.blocked[i] !== 0 && cls !== MoveClass.Air ? 0 : speedPercent(cls, this.terrain[i]);
+      this.speedGrids[cls] = g;
+    }
+    return g;
   }
 
   private buildComponents(cls: MoveClass): Int32Array {
     const { width, height } = this;
+    const speed = this.speedGrid(cls);
     const comp = new Int32Array(width * height).fill(-1);
     const stack: number[] = [];
     let next = 0;
     for (let start = 0; start < comp.length; start++) {
-      if (comp[start] !== -1) continue;
-      const sx = start % width;
-      const sy = (start - sx) / width;
-      if (!this.passable(sx, sy, cls)) continue;
+      if (comp[start] !== -1 || speed[start] === 0) continue;
       comp[start] = next;
       stack.push(start);
       while (stack.length > 0) {
         const cur = stack.pop()!;
         const cx = cur % width;
         const cy = (cur - cx) / width;
-        for (const [dx, dy] of DIRS) {
-          if (!this.canStep(cx, cy, dx, dy, cls)) continue;
-          const ni = (cy + dy) * width + cx + dx;
-          if (comp[ni] === -1) {
-            comp[ni] = next;
-            stack.push(ni);
-          }
+        for (let d = 0; d < 8; d++) {
+          const dx = DIRS[d][0];
+          const dy = DIRS[d][1];
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const ni = ny * width + nx;
+          if (comp[ni] !== -1 || speed[ni] === 0) continue;
+          // Diagonal nur, wenn beide geraden Nachbarn frei sind (wie canStep)
+          if (dx !== 0 && dy !== 0 && (speed[cy * width + nx] === 0 || speed[ny * width + cx] === 0)) continue;
+          comp[ni] = next;
+          stack.push(ni);
         }
       }
       next++;
