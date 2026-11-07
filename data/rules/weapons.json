@@ -1,0 +1,76 @@
+{
+  "weapons": [
+    {
+      "id": "rifle",
+      "damage": 14,
+      "versus": { "infantry": 100, "light": 30, "heavy": 15, "building": 15, "air": 0 },
+      "range": 4,
+      "reload": 1.0,
+      "projectile": "bullet",
+      "projectileSpeed": 18,
+      "targets": "ground"
+    },
+    {
+      "id": "rocketLauncher",
+      "damage": 45,
+      "versus": { "infantry": 25, "light": 100, "heavy": 100, "building": 55, "air": 100 },
+      "range": 5,
+      "reload": 2.2,
+      "projectile": "rocket",
+      "projectileSpeed": 8,
+      "targets": "both"
+    },
+    {
+      "id": "lightCannon",
+      "damage": 32,
+      "versus": { "infantry": 90, "light": 100, "heavy": 55, "building": 50, "air": 0 },
+      "range": 4.5,
+      "reload": 1.5,
+      "projectile": "cannon",
+      "projectileSpeed": 14,
+      "targets": "ground"
+    },
+    {
+      "id": "flakGun",
+      "damage": 18,
+      "versus": { "infantry": 35, "light": 15, "heavy": 8, "building": 8, "air": 100 },
+      "range": 6,
+      "reload": 0.6,
+      "projectile": "flak",
+      "projectileSpeed": 16,
+      "targets": "both"
+    },
+    {
+      "id": "artilleryShell",
+      "damage": 70,
+      "versus": { "infantry": 100, "light": 60, "heavy": 40, "building": 120, "air": 0 },
+      "range": 9,
+      "minRange": 2.5,
+      "reload": 3.5,
+      "projectile": "shell",
+      "projectileSpeed": 6,
+      "splash": 1.2,
+      "targets": "ground"
+    },
+    {
+      "id": "mgTurret",
+      "damage": 12,
+      "versus": { "infantry": 100, "light": 25, "heavy": 10, "building": 10, "air": 0 },
+      "range": 5.5,
+      "reload": 0.4,
+      "projectile": "bullet",
+      "projectileSpeed": 20,
+      "targets": "ground"
+    },
+    {
+      "id": "cannonTurret",
+      "damage": 55,
+      "versus": { "infantry": 40, "light": 100, "heavy": 100, "building": 50, "air": 0 },
+      "range": 6,
+      "reload": 2.0,
+      "projectile": "cannon",
+      "projectileSpeed": 15,
+      "targets": "ground"
+    }
+  ]
+}
