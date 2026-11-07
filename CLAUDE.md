@@ -40,6 +40,24 @@ scripts/          Werkzeuge (z.B. Kartengenerator)
 | `sim/fog.ts` | Sicht je Spieler (Verbündete teilen), Erkundet, «Geister» gesehener Gebäude |
 | `sim/setup.ts` | Gefechts-Start: Bauwagen + Eskorte je Startplatz, KI-Spieler anhängen |
 | `ai/skirmishAi.ts` | KI: nur über `sim.issue()`, sieht nur durch eigene Augen; Stufen in `data/rules/ai.json` |
+| `mission/mission.ts` | Kampagne: Missions-Schema (Zod), Ereignissystem (Auslöser → Aktionen), Ziele, Countdown, `createMission` |
+
+### Kampagne (`data/missions/*.json`)
+- Eine Mission = Karte + JSON mit `players`, `credits`, `locked` («*» = alles gesperrt), benannten `areas`
+  ([x, y, Breite, Höhe] in Kacheln) und `events`. Ereignis: `when` (alle Auslöser müssen zutreffen),
+  `do` (Aktionen), optional `delay` (Sekunden) und `difficulty` (nur auf diesen Stufen).
+- Auslöser: start, time, every (wiederholt), enterArea, destroyed (Markierung/`tag`), built, army, noBase,
+  objectivesDone, flag. Aktionen: message (Funkspruch, `speaker` commander/enemy/researcher), objective,
+  complete, fail, spawn (`growth` je Wiederholung), building, base (Gebäude spiralförmig um einen Punkt),
+  attack, transfer, reveal, credits, flag, ai (KI einschalten), countdown, victory, defeat.
+- Zahlen dürfen je Stufe verschieden sein: `{ "easy": 1, "medium": 2, "hard": 3 }`.
+- Spieler ist immer id 1. Missionen laufen mit `victory: 'none'`; Sieg/Niederlage nur über Aktionen
+  (Aufgeben → Niederlage). Alle Missionstexte in den i18n-Dateien (Test prüft DE + EN).
+- Neue Mission: JSON in `data/missions`, in `packages/client/src/data.ts` eintragen, Texte ergänzen,
+  in `test/mission.test.ts` aufnehmen. Freischaltung: erste je Fraktion offen, sonst Vorgängerin (gleiche
+  Fraktion, `order` − 1) auf irgendeiner Stufe geschafft. Fortschritt in IndexedDB (`campaign`).
+- Client: `ui/Menu.ts` (Kampagne, Briefing mit Porträt aus `ui/portraits.ts`), Zielliste + Countdown +
+  Funksprüche in `ui/Hud.ts`. Dev: `?mission=a1` öffnet das Briefing direkt (auch gesperrte Missionen).
 
 Tick-Reihenfolge: Befehle → Produktion → Reparatur → Wirtschaft → Aufgaben → Kampf → Geschosse →
 Bewegung → Strom → Nebel (alle 3 Ticks) → Sieg (alle 15 Ticks) → KI. Tote Objekte werden mit `dead`
@@ -142,7 +160,14 @@ npm run maps         # Startkarten neu erzeugen
   Türme, Flächenschaden), Nebel mit Geistern, gemeinsame Bodeneinheiten beider Fraktionen (Aero billiger und
   schneller, Granit zäher), Ingenieur, Bauwagen, KI Leicht, Sieg/Niederlage/Aufgeben, Hauptmenü,
   Endstatistik. Getestet: komplette Partie gegen KI im Browser gewonnen; KI besiegt untätigen Gegner (Test).
-- **Etappe 4 – Inhalte:** fertig, wartet auf Abnahme. Luft (Kampf-/Transporthubschrauber, Jets mit Munition →
+- **Etappe 5 – Kampagne:** fertig, wartet auf Abnahme. A1 «Landung auf Neu-Aurora» (Tutorial auf Kristalltal),
+  A2 «Rettung im Nebel» (Kommando, eigene Karte Nebelwald), G1 «Die Mauer hält» (15 Min. verteidigen auf
+  Vier Winde), G2 «Gegenschlag» (Archipel gegen KI-Basis). Figuren: Kommandantin Lyra Funke (Aero),
+  Kommandantin Berta Basalt (Granit), Dr. Ida Quarz (Forscherin, Zivilistin = wird nie beschossen).
+  Durchspielbarkeit per Test-Skript geprüft: G1 mit passiver Verteidigung auf Leicht/Mittel gewonnen, auf Schwer
+  nach ~10 Min. verloren (braucht Türme/Flak); A2 mit Taktik (Wald-/Flussweg, Rückzug nach Befreiung) auf allen
+  Stufen gewonnen. G2 nur angespielt – Abnahme durch Christian.
+- **Etappe 4 – Inhalte:** abgenommen (7.11.2026). Luft (Kampf-/Transporthubschrauber, Jets mit Munition →
   Flugfeld nachladen, Luftschiffe), See (Patrouillen-/Landungsboot, Werft nur am Wasser), Spezialeinheiten je
   Fraktion (Aero: Düsenrucksack, Schwebepanzer, Komet-Jäger, Radar-Zeppelin, Raketenboot; Granit: Schildträger,
   Koloss, Maulwurf (gräbt sich ein, bringt 4 Schützen mit), Bomben-Luftschiff, Dampfkreuzer), Spezialabwehr
