@@ -12,11 +12,12 @@ import {
   type LobbySlot,
   type SlotSetup,
 } from '@fftr/shared';
-import { MAPS, getRules, mapInfo } from '../data';
+import { MAPS, getMission, getMissions, getRules, mapInfo } from '../data';
 import { applyI18n, getLang, onLangChange, setLang, t, type Lang } from '../i18n';
 import { PLAYER_COLORS, iconFor } from '../game/textures';
 import { NetSession } from '../net/NetSession';
-import { getItem, getSettings, saveSettings, setItem } from '../storage';
+import { getItem, getSettings, loadProgress, saveLastDifficulty, saveSettings, setItem, type CampaignProgress } from '../storage';
+import { portrait } from './portraits';
 
 /** Alles, was die Spielszene für eine Partie braucht. */
 export interface GameConfig {
@@ -28,6 +29,8 @@ export interface GameConfig {
   /** Nur im Mehrspieler: Verbindung und Startinfo vom Server. */
   net?: NetSession;
   speed?: number;
+  /** Kampagnen-Mission (Einzelspieler). */
+  mission?: { id: string; difficulty: AiLevel };
   /** Neutrale Glimmerit-Quellen (Standard: an). */
   bonusPoints?: boolean;
 }
@@ -39,7 +42,7 @@ const NAME_KEY = 'fftr.name';
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-type Screen = 'main' | 'skirmish' | 'settings' | 'credits' | 'multiplayer' | 'lobby';
+type Screen = 'main' | 'skirmish' | 'settings' | 'credits' | 'multiplayer' | 'lobby' | 'campaign' | 'briefing';
 
 /** Spielkonfiguration aus der Startinfo des Servers. */
 export function configFromStart(info: GameStartInfo, net: NetSession): GameConfig {
@@ -146,6 +149,12 @@ export class Menu {
       case 'lobby':
         this.renderLobby();
         break;
+      case 'campaign':
+        this.renderCampaign();
+        break;
+      case 'briefing':
+        this.renderBriefing();
+        break;
     }
     applyI18n(this.root);
   }
@@ -165,13 +174,126 @@ export class Menu {
           <p data-i18n="game.tagline"></p>
         </div>
         <div class="menu-buttons">
-          <button type="button" disabled><span data-i18n="menu.campaign"></span><small>${t('menu.comingSoon', { n: 5 })}</small></button>
+          <button type="button" class="primary" data-go="campaign" data-i18n="menu.campaign"></button>
           <button type="button" class="primary" data-go="skirmish" data-i18n="menu.skirmish"></button>
           <button type="button" class="primary" data-go="multiplayer" data-i18n="menu.multiplayer"></button>
           <button type="button" data-go="settings" data-i18n="menu.settings"></button>
           <button type="button" data-go="credits" data-i18n="menu.credits"></button>
         </div>
       </div>`;
+    this.bindGo();
+  }
+
+  // ───────────── Kampagne ─────────────
+
+  private progress: CampaignProgress = { done: {} };
+  private briefingId = '';
+  private difficulty: AiLevel = 'medium';
+
+  /** Direkt zum Briefing einer Mission (z.B. «Nächste Mission» nach einem Sieg). */
+  openBriefing(id: string): void {
+    this.briefingId = id;
+    void loadProgress().then((p) => {
+      this.progress = p;
+      this.difficulty = p.lastDifficulty ?? this.difficulty;
+      this.show('briefing');
+    });
+  }
+
+  /** Ist die Mission freigeschaltet? (erste je Fraktion immer, sonst Vorgängerin geschafft) */
+  private unlocked(id: string): boolean {
+    const m = getMission(id);
+    if (!m) return false;
+    const prev = getMissions().find((o) => o.faction === m.faction && o.order === m.order - 1);
+    return !prev || (this.progress.done[prev.id]?.length ?? 0) > 0;
+  }
+
+  private renderCampaign(): void {
+    // Fortschritt nachladen (asynchron), dann neu zeichnen
+    void loadProgress().then((p) => {
+      if (JSON.stringify(p) === JSON.stringify(this.progress)) return;
+      this.progress = p;
+      if (this.screen === 'campaign') this.render();
+    });
+    const column = (f: Faction) => {
+      const missions = getMissions().filter((m) => m.faction === f);
+      const cards = missions
+        .map((m) => {
+          const open = this.unlocked(m.id);
+          const done = this.progress.done[m.id] ?? [];
+          const stars = AI_LEVELS.map((l) => `<i class="star ${done.includes(l) ? 'on' : ''}" title="${t(`ai.${l}`)}">★</i>`).join('');
+          return `<button type="button" class="mission-card ${done.length ? 'done' : ''}" data-mission="${m.id}" ${open ? '' : 'disabled'}>
+            <span class="mission-no">${m.id.toUpperCase()}</span>
+            <span class="mission-title">${t(m.titleKey)}</span>
+            <span class="mission-state">${open ? stars : `🔒 ${t('campaign.locked')}`}</span>
+          </button>`;
+        })
+        .join('');
+      return `<section class="campaign-col ${f}">
+        <header><img src="${portrait(f)}" alt="" /><div><b>${t(`faction.${f}`)}</b><small>${t(`commander.${f}`)}</small></div></header>
+        ${cards}
+      </section>`;
+    };
+    this.root.innerHTML = `
+      <div class="menu-card wide">
+        <h2 data-i18n="campaign.title"></h2>
+        <p class="muted" data-i18n="campaign.intro"></p>
+        <div class="campaign-cols">${FACTIONS.map(column).join('')}</div>
+        <div class="menu-actions"><button type="button" data-go="main" data-i18n="menu.back"></button></div>
+      </div>`;
+    this.root.querySelectorAll<HTMLButtonElement>('[data-mission]').forEach((b) =>
+      b.addEventListener('click', () => this.openBriefing(b.dataset.mission!)),
+    );
+    this.bindGo();
+  }
+
+  private renderBriefing(): void {
+    const m = getMission(this.briefingId);
+    if (!m) {
+      this.show('campaign');
+      return;
+    }
+    const paragraphs = t(m.briefingKey)
+      .split('\n')
+      .map((p) => `<p>${esc(p)}</p>`)
+      .join('');
+    this.root.innerHTML = `
+      <div class="menu-card wide briefing ${m.faction}">
+        <h2><span class="mission-no">${m.id.toUpperCase()}</span> ${esc(t(m.titleKey))}</h2>
+        <div class="briefing-body">
+          <figure><img src="${portrait(m.faction)}" alt="" /><figcaption>${t(`commander.${m.faction}`)}</figcaption></figure>
+          <div class="briefing-text">
+            ${paragraphs}
+            <h3 data-i18n="campaign.goals"></h3>
+            <ul class="goals">${m.briefingGoals.map((g) => `<li>${esc(t(g))}</li>`).join('')}</ul>
+          </div>
+        </div>
+        <h3 data-i18n="skirmish.difficulty"></h3>
+        <div class="difficulty-buttons">${AI_LEVELS.map(
+          (l) => `<button type="button" data-level="${l}" class="${this.difficulty === l ? 'active' : ''}">${t(`ai.${l}`)}${(this.progress.done[m.id] ?? []).includes(l) ? ' ★' : ''}</button>`,
+        ).join('')}</div>
+        <div class="menu-actions">
+          <button type="button" data-go="campaign" data-i18n="menu.back"></button>
+          <button type="button" class="primary big" id="mission-start" data-i18n="campaign.start"></button>
+        </div>
+      </div>`;
+    this.root.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.difficulty = b.dataset.level as AiLevel;
+        void saveLastDifficulty(this.difficulty);
+        this.render();
+      }),
+    );
+    this.root.querySelector('#mission-start')!.addEventListener('click', () => {
+      this.hide();
+      this.onStart({
+        mapId: m.map,
+        startCredits: 0,
+        localPlayer: 1,
+        slots: m.players.map((p) => ({ id: p.id, name: t(p.nameKey), faction: p.faction, color: p.color, team: p.team })),
+        mission: { id: m.id, difficulty: this.difficulty },
+      });
+    });
     this.bindGo();
   }
 

@@ -61,6 +61,14 @@ export interface HudActions {
   toMenu(): void;
   playAgain(): void;
   sendPing(kind: 'help' | 'attack'): void;
+  /** Kampagne: zum Briefing der nächsten Mission. */
+  nextMission(): void;
+}
+
+/** Ein Missionsziel für die Anzeige. */
+export interface ObjectiveView {
+  key: string;
+  status: 'open' | 'done' | 'failed';
 }
 
 const ICONS = {
@@ -487,13 +495,98 @@ export class Hud {
     while (this.feed.children.length > 4) this.feed.lastElementChild?.remove();
     window.setTimeout(() => line.classList.add('fade'), 4000);
     window.setTimeout(() => line.remove(), 5000);
-    if (bubble) {
+    // Während eines Funkspruchs keine zweite Sprechblase (die Meldung steht ja oben links)
+    if (bubble && !this.radioBusy) {
+      this.bubble.onclick = null;
       this.bubble.innerHTML = `<div class="commander ${kind}"></div><p></p>`;
       this.bubble.querySelector('p')!.textContent = text;
       this.bubble.hidden = false;
       window.clearTimeout(Number(this.bubble.dataset.timer));
       this.bubble.dataset.timer = String(window.setTimeout(() => (this.bubble.hidden = true), 4500));
     }
+  }
+
+  // ───────────── Kampagne: Funksprüche, Ziele, Countdown ─────────────
+
+  private radioQueue: { text: string; img: string; name: string }[] = [];
+  private radioBusy = false;
+  private objectivesEl: HTMLElement | null = null;
+  private objectivesOpen = true;
+  private countdownText: string | null = null;
+  private objectives: ObjectiveView[] = [];
+
+  /** Funkspruch mit Porträt; mehrere hintereinander werden nacheinander gezeigt. */
+  radio(text: string, img: string, name: string): void {
+    const line = document.createElement('div');
+    line.className = 'msg radio';
+    line.textContent = `${name}: ${text}`;
+    this.feed.prepend(line);
+    while (this.feed.children.length > 4) this.feed.lastElementChild?.remove();
+    window.setTimeout(() => line.classList.add('fade'), 6000);
+    window.setTimeout(() => line.remove(), 7000);
+    this.radioQueue.push({ text, img, name });
+    if (!this.radioBusy) this.nextRadio();
+  }
+
+  private nextRadio(): void {
+    const r = this.radioQueue.shift();
+    if (!r) {
+      this.radioBusy = false;
+      this.bubble.hidden = true;
+      return;
+    }
+    this.radioBusy = true;
+    this.bubble.innerHTML = `<img class="portrait" src="${r.img}" alt="" /><div><b></b><p></p></div>`;
+    this.bubble.querySelector('b')!.textContent = r.name;
+    this.bubble.querySelector('p')!.textContent = r.text;
+    this.bubble.hidden = false;
+    // Lesezeit je nach Länge, Tippen schliesst früher
+    const ms = Math.min(11000, 3500 + r.text.length * 45);
+    window.clearTimeout(Number(this.bubble.dataset.timer));
+    this.bubble.dataset.timer = String(window.setTimeout(() => this.nextRadio(), ms));
+    this.bubble.onclick = () => {
+      window.clearTimeout(Number(this.bubble.dataset.timer));
+      this.nextRadio();
+    };
+  }
+
+  setObjectives(list: ObjectiveView[]): void {
+    this.objectives = list.map((o) => ({ ...o }));
+    if (!this.objectivesEl) {
+      this.objectivesEl = this.addToStage('div', 'objectives');
+      this.stage.classList.add('has-objectives');
+      this.cleanup.push(() => this.stage.classList.remove('has-objectives'));
+      // Auf kleinen Bildschirmen anfangs zugeklappt
+      this.objectivesOpen = !window.matchMedia('(max-width: 900px), (max-height: 520px)').matches;
+    }
+    this.renderObjectives();
+  }
+
+  toggleObjectives(): void {
+    this.objectivesOpen = !this.objectivesOpen;
+    this.renderObjectives();
+  }
+
+  setCountdown(text: string | null): void {
+    this.countdownText = text;
+    this.renderObjectives();
+  }
+
+  private renderObjectives(): void {
+    const el = this.objectivesEl;
+    if (!el) return;
+    const icon = { open: '☐', done: '✔', failed: '✖' };
+    el.classList.toggle('open', this.objectivesOpen);
+    el.innerHTML = `
+      <button type="button" class="obj-toggle" aria-expanded="${this.objectivesOpen}">📋 ${t('mission.objectives')} <small>(O)</small></button>
+      ${this.countdownText ? `<div class="countdown">⏱ ${this.countdownText}</div>` : ''}
+      ${
+        this.objectivesOpen
+          ? `<ul>${this.objectives.map((o) => `<li class="${o.status}"><i>${icon[o.status]}</i><span></span></li>`).join('')}</ul>`
+          : ''
+      }`;
+    el.querySelectorAll('li span').forEach((s, i) => (s.textContent = t(this.objectives[i].key)));
+    el.querySelector('.obj-toggle')!.addEventListener('click', () => this.toggleObjectives());
   }
 
   // ───────────── Pause & Ende ─────────────
@@ -531,7 +624,12 @@ export class Hud {
     this.overlay.innerHTML = '';
   }
 
-  showEnd(victory: boolean, rows: { name: string; color: string; stats: PlayerStats }[], seconds: number): void {
+  showEnd(
+    victory: boolean,
+    rows: { name: string; color: string; stats: PlayerStats }[],
+    seconds: number,
+    campaign?: { reason?: string; hasNext: boolean },
+  ): void {
     const keys: (keyof PlayerStats)[] = ['unitsBuilt', 'unitsLost', 'buildingsBuilt', 'buildingsLost', 'kills', 'harvested'];
     const mm = Math.floor(seconds / 60);
     const ss = String(Math.floor(seconds % 60)).padStart(2, '0');
@@ -539,7 +637,8 @@ export class Hud {
     this.overlay.innerHTML = `
       <div class="menu-card wide end ${victory ? 'victory' : 'defeat'}">
         <h2>${t(victory ? 'end.victory' : 'end.defeat')}</h2>
-        <p>${t(victory ? 'end.victoryText' : 'end.defeatText')}</p>
+        <p>${campaign ? t(victory ? 'mission.victoryText' : 'mission.defeatText') : t(victory ? 'end.victoryText' : 'end.defeatText')}</p>
+        ${campaign?.reason ? `<p class="reason"></p>` : ''}
         <p class="muted">${t('end.time', { time: `${mm}:${ss}` })}</p>
         <div class="table-wrap"><table>
           <thead><tr><th>${t('end.player')}</th>${keys.map((k) => `<th>${t(`end.${k}`)}</th>`).join('')}</tr></thead>
@@ -551,12 +650,21 @@ export class Hud {
             .join('')}</tbody>
         </table></div>
         <div class="menu-actions">
-          <button type="button" ${this.multiplayer ? 'class="primary big"' : ''} data-act="menu">${t('end.menu')}</button>
-          ${this.multiplayer ? '' : `<button type="button" class="primary big" data-act="again">${t('end.again')}</button>`}
+          ${
+            campaign
+              ? `<button type="button" data-act="menu">${t('mission.toCampaign')}</button>
+                 <button type="button" ${campaign.hasNext ? '' : 'class="primary big"'} data-act="again">${t(victory ? 'mission.replay' : 'mission.retry')}</button>
+                 ${campaign.hasNext ? `<button type="button" class="primary big" data-act="next">${t('mission.next')}</button>` : ''}`
+              : `<button type="button" ${this.multiplayer ? 'class="primary big"' : ''} data-act="menu">${t('end.menu')}</button>
+                 ${this.multiplayer ? '' : `<button type="button" class="primary big" data-act="again">${t('end.again')}</button>`}`
+          }
         </div>
       </div>`;
+    const reason = this.overlay.querySelector('.reason');
+    if (reason && campaign?.reason) reason.textContent = campaign.reason;
     this.overlay.querySelector('[data-act="menu"]')!.addEventListener('click', () => this.actions.toMenu());
     this.overlay.querySelector('[data-act="again"]')?.addEventListener('click', () => this.actions.playAgain());
+    this.overlay.querySelector('[data-act="next"]')?.addEventListener('click', () => this.actions.nextMission());
   }
 
   /** Hinweis bei Verbindungsproblemen (Mehrspieler). */

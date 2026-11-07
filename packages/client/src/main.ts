@@ -45,10 +45,11 @@ function startGame(config: GameConfig): void {
   app.classList.add('in-game');
   const data: GameSceneData = {
     config,
-    onExit: () => {
+    onExit: (next) => {
       game.scene.stop('game');
       app.classList.remove('in-game');
-      menu.show('main');
+      if (next?.briefing) menu.openBriefing(next.briefing);
+      else menu.show(config.mission ? 'campaign' : 'main');
     },
   };
   if (game.scene.isActive('game')) game.scene.stop('game');
@@ -57,8 +58,11 @@ function startGame(config: GameConfig): void {
 
 const menu = new Menu(app, startGame);
 
-// Schnellstart für Tests: ?play startet sofort ein Gefecht mit den letzten Einstellungen
-if (new URLSearchParams(location.search).has('play')) {
+// Schnellstart für Tests: ?play startet sofort ein Gefecht mit den letzten Einstellungen,
+// ?mission=a1 öffnet das Briefing einer Mission (auch gesperrte – nur zum Testen)
+const params = new URLSearchParams(location.search);
+if (params.get('mission')) menu.openBriefing(params.get('mission')!);
+if (params.has('play')) {
   window.setTimeout(() => (document.querySelector('[data-go="skirmish"]') as HTMLButtonElement | null)?.click(), 50);
   window.setTimeout(() => (document.getElementById('start') as HTMLButtonElement | null)?.click(), 400);
 }

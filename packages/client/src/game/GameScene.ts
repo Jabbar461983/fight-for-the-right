@@ -9,6 +9,7 @@ import {
   applySnapshot,
   availability,
   canPlace,
+  createMission,
   createSkirmish,
   pxToUnits,
   tileOf,
@@ -16,6 +17,7 @@ import {
   type Building,
   type BuildingDef,
   type Ghost,
+  type Mission,
   type PingKind,
   type Rules,
   type SimEvent,
@@ -24,10 +26,11 @@ import {
   type UnitDef,
 } from '@fftr/shared';
 import type { NetSession, PingMessage } from '../net/NetSession';
-import { getRules, loadMap } from '../data';
+import { getMission, getMissions, getRules, loadMap } from '../data';
 import { t } from '../i18n';
 import { InputController, type InputTarget } from '../input/InputController';
-import { getSettings } from '../storage';
+import { getSettings, markMissionDone } from '../storage';
+import { portrait, type PortraitKind } from '../ui/portraits';
 import { Hud, type BuildItemState, type BuildTab, type HudActions } from '../ui/Hud';
 import type { GameConfig } from '../ui/Menu';
 import { MINIMAP_COLORS, paintTerrain } from './terrainPainter';
@@ -89,7 +92,7 @@ interface BuildingView {
 
 export interface GameSceneData {
   config: GameConfig;
-  onExit: () => void;
+  onExit: (next?: { briefing: string }) => void;
 }
 
 /**
@@ -99,7 +102,11 @@ export interface GameSceneData {
  */
 export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   private cfg!: GameConfig;
-  private onExit!: () => void;
+  private onExit!: (next?: { briefing: string }) => void;
+  /** Kampagne: laufende Mission. */
+  private mission: Mission | null = null;
+  private missionEndKey: string | undefined;
+  private lastCountdown = -1;
   private sim!: Simulation;
   private rules!: Rules;
   private local = 1;
@@ -176,6 +183,9 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     this.netIndex = null;
     this.pingArmed = false;
     this.pings = [];
+    this.mission = null;
+    this.missionEndKey = undefined;
+    this.lastCountdown = -1;
   }
 
   /** Befehl an die Simulation – lokal oder über das Netz an den Server. */
@@ -198,6 +208,12 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       });
       this.netIndex = new NetIndex(this.sim);
       this.snapInterval = (TICK_MS * 2) / (this.cfg.speed ?? 1);
+    } else if (this.cfg.mission) {
+      // Kampagne: Mission mit Ereignissen, Spieler hat immer die id 1
+      const def = getMission(this.cfg.mission.id)!;
+      const created = createMission({ def, map, rules: this.rules, difficulty: this.cfg.mission.difficulty, translate: (k) => t(k) });
+      this.sim = created.sim;
+      this.mission = created.mission;
     } else {
       this.sim = createSkirmish({ map, rules: this.rules, slots: this.cfg.slots, startCredits: this.cfg.startCredits, bonusPoints: this.cfg.bonusPoints ?? true });
     }
@@ -233,7 +249,8 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     // Gleich den Bauwagen auswählen, damit Neulinge wissen, wo es losgeht
     const wagon = this.sim.units.find((u) => u.owner === this.local && u.def.deploysTo);
     if (wagon) this.selection.add(wagon.id);
-    this.hud.message(t('msg.welcome'), 'info', true);
+    if (this.mission) this.hud.setObjectives(this.mission.objectives);
+    else this.hud.message(t('msg.welcome'), 'info', true);
     this.updateHud();
 
     if (import.meta.env.DEV) (window as unknown as { fftr: unknown }).fftr = { scene: this, sim: this.sim };
@@ -416,6 +433,13 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     if (this.hudTimer <= 0) {
       this.hudTimer = 200;
       this.updateHud();
+      // Kampagne: Countdown (nur bei Änderung neu zeichnen)
+      const cd = this.mission?.countdown;
+      const secs = cd ? Math.max(0, Math.ceil(((cd.endTick - this.sim.tick) * TICK_MS) / 1000)) : -1;
+      if (secs !== this.lastCountdown) {
+        this.lastCountdown = secs;
+        this.hud.setCountdown(cd && secs >= 0 ? t(cd.key, { time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` }) : null);
+      }
     }
     this.minimapTimer -= delta;
     if (this.minimapTimer <= 0) {
@@ -624,6 +648,23 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           break;
         case 'cannotUnload':
           if (e.owner === me) this.hud.message(t('msg.cannotUnload'), 'warn', true);
+          break;
+        case 'radio': {
+          // Funkspruch: eigene Kommandantin, Gegnerin oder die Forscherin
+          const own = this.sim.players[me]?.faction ?? 'aero';
+          const kind: PortraitKind = e.speaker === 'researcher' ? 'researcher' : e.speaker === 'enemy' ? (own === 'aero' ? 'granite' : 'aero') : own;
+          this.hud.radio(t(e.key), portrait(kind, e.speaker === 'enemy' ? 'angry' : 'normal'), t(kind === 'researcher' ? 'commander.researcher' : `commander.${kind}`));
+          break;
+        }
+        case 'objective':
+          if (this.mission) this.hud.setObjectives(this.mission.objectives);
+          if (e.status === 'open') this.hud.message(t('mission.newObjective', { text: t(e.key) }), 'info');
+          else if (e.status === 'done') this.hud.message(t('mission.objectiveDone', { text: t(e.key) }), 'good');
+          else this.hud.message(t('mission.objectiveFailed', { text: t(e.key) }), 'warn');
+          break;
+        case 'missionEnd':
+          this.missionEndKey = e.reasonKey;
+          if (e.victory && this.cfg.mission) void markMissionDone(this.cfg.mission.id, this.cfg.mission.difficulty);
           break;
         case 'surfaced':
           // Maulwurf taucht auf: Erdbrocken fliegen
@@ -908,6 +949,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const add = (def: UnitDef | BuildingDef, category: BuildTab) => {
       if (!def.buildable) return;
       const av = availability(this.sim, this.local, def);
+      if (av.locked) return;
       const queue = p.queues[category].filter((q) => q.defId === def.id);
       const head = p.queues[category][0];
       const isHead = head?.defId === def.id;
@@ -1316,6 +1358,9 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       case 'd':
         this.deploy();
         return true;
+      case 'o':
+        if (this.mission) this.hud.toggleObjectives();
+        return true;
       case 'space':
         if (this.lastEventPos) this.centerOnWorldPx(unitsToPx(this.lastEventPos.x), unitsToPx(this.lastEventPos.y));
         else this.centerOnSelection();
@@ -1551,8 +1596,27 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       color: `#${this.colorOf(p.id).toString(16).padStart(6, '0')}`,
       stats: p.stats,
     }));
+    const campaign = this.mission
+      ? { reason: this.missionEndKey ? t(this.missionEndKey) : undefined, hasNext: victory && !!this.nextMissionId() }
+      : undefined;
     // Kurz warten, damit die letzten Explosionen noch zu sehen sind
-    this.time.delayedCall(1500, () => this.hud.showEnd(victory, rows, (this.sim.tick * TICK_MS) / 1000));
+    this.time.delayedCall(1500, () => this.hud.showEnd(victory, rows, (this.sim.tick * TICK_MS) / 1000, campaign));
+  }
+
+  /** Nächste Mission derselben Fraktion (oder keine). */
+  private nextMissionId(): string | undefined {
+    const cur = this.mission?.def;
+    if (!cur) return undefined;
+    return getMissions().find((m) => m.faction === cur.faction && m.order === cur.order + 1)?.id;
+  }
+
+  nextMission(): void {
+    const id = this.nextMissionId();
+    this.onExit(id ? { briefing: id } : undefined);
+  }
+
+  toggleObjectives(): void {
+    this.hud.toggleObjectives();
   }
 }
 

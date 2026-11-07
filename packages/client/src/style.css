@@ -1235,3 +1235,251 @@ td:first-child {
     padding: 24px;
   }
 }
+
+/* ───────────── Kampagne ───────────── */
+.campaign-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.campaign-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 3px solid var(--outline);
+  border-radius: 16px;
+  background: var(--panel-2);
+}
+
+.campaign-col header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.campaign-col header img {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+}
+
+.campaign-col header div {
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-col header small {
+  color: var(--muted);
+}
+
+.mission-card {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  min-height: 64px;
+  padding: 8px 12px;
+  text-align: left;
+  border: 3px solid var(--outline);
+  border-radius: 12px;
+  background: #3d4378;
+}
+
+.mission-card:disabled {
+  opacity: 0.55;
+}
+
+.mission-card.done {
+  background: #35603f;
+}
+
+.mission-no {
+  grid-row: span 2;
+  align-self: center;
+  display: inline-block;
+  padding: 4px 6px;
+  border: 2px solid var(--outline);
+  border-radius: 8px;
+  background: var(--accent-2);
+  color: var(--outline);
+  font-weight: 800;
+  text-align: center;
+}
+
+.mission-title {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.mission-state {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.star {
+  font-style: normal;
+  color: #59587a;
+  margin-right: 2px;
+}
+
+.star.on {
+  color: var(--accent-2);
+}
+
+.briefing h2 .mission-no {
+  margin-right: 6px;
+}
+
+.briefing-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.briefing-body figure {
+  margin: 0;
+  flex: none;
+  text-align: center;
+}
+
+.briefing-body figure img {
+  width: 128px;
+  height: 128px;
+  border-radius: 16px;
+}
+
+.briefing-body figcaption {
+  max-width: 128px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.briefing-text p {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.goals li {
+  margin: 4px 0;
+}
+
+.difficulty-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.difficulty-buttons button {
+  min-width: 110px;
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 3px solid var(--outline);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.difficulty-buttons button.active {
+  background: var(--accent-2);
+  color: var(--outline);
+}
+
+@media (max-width: 600px) {
+  .briefing-body {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+/* Funksprüche mit Porträt */
+.bubble .portrait {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 12px;
+}
+
+.bubble b {
+  display: block;
+  font-size: 13px;
+}
+
+.bubble {
+  cursor: pointer;
+}
+
+.msg.radio {
+  border-color: var(--accent);
+}
+
+/* Missionsziele */
+.has-objectives .msg-feed {
+  top: auto;
+  bottom: 90px;
+}
+
+.objectives {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 6;
+  max-width: min(340px, 45%);
+  padding: 6px 10px;
+  border: 3px solid var(--outline);
+  border-radius: 14px;
+  background: rgba(38, 42, 66, 0.92);
+}
+
+.objectives .obj-toggle {
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.objectives small {
+  color: var(--muted);
+}
+
+.objectives ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 4px;
+}
+
+.objectives li {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.objectives li i {
+  font-style: normal;
+}
+
+.objectives li.done {
+  color: var(--good);
+  text-decoration: line-through;
+}
+
+.objectives li.failed {
+  color: var(--warn);
+}
+
+.objectives .countdown {
+  margin: 2px 4px 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent-2);
+}
+
+.end .reason {
+  color: var(--warn);
+  font-weight: 700;
+}

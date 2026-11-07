@@ -1,4 +1,9 @@
-import { loadRules, parseTiledMap, type GameMap, type Rules } from '@fftr/shared';
+import { loadMission, loadRules, parseTiledMap, type GameMap, type MissionDef, type Rules } from '@fftr/shared';
+import nebelwald from '@data/maps/nebelwald.json';
+import missionA1 from '@data/missions/a1.json';
+import missionA2 from '@data/missions/a2.json';
+import missionG1 from '@data/missions/g1.json';
+import missionG2 from '@data/missions/g2.json';
 import weapons from '@data/rules/weapons.json';
 import buildings from '@data/rules/buildings.json';
 import factions from '@data/rules/factions.json';
@@ -37,10 +42,27 @@ export const MAPS: MapInfo[] = [
   { id: 'archipel', nameKey: 'map.archipel.name', maxPlayers: 4, json: archipel },
 ];
 
+/** Karten nur für Missionen (nicht im Gefecht wählbar). */
+const MISSION_MAPS: MapInfo[] = [{ id: 'nebelwald', nameKey: 'map.nebelwald.name', maxPlayers: 2, json: nebelwald }];
+
 export function mapInfo(id: string): MapInfo {
-  return MAPS.find((m) => m.id === id) ?? MAPS[0];
+  return MAPS.find((m) => m.id === id) ?? MISSION_MAPS.find((m) => m.id === id) ?? MAPS[0];
 }
 
 export function loadMap(id: string): GameMap {
   return parseTiledMap(mapInfo(id).json);
+}
+
+let missionsCache: MissionDef[] | null = null;
+
+/** Alle Kampagnen-Missionen (geprüft), sortiert nach Fraktion und Reihenfolge. Neue Mission: JSON in data/missions + hier eintragen. */
+export function getMissions(): MissionDef[] {
+  missionsCache ??= [missionA1, missionA2, missionG1, missionG2]
+    .map((json) => loadMission(json, getRules()))
+    .sort((a, b) => a.faction.localeCompare(b.faction) || a.order - b.order);
+  return missionsCache;
+}
+
+export function getMission(id: string): MissionDef | undefined {
+  return getMissions().find((m) => m.id === id);
 }

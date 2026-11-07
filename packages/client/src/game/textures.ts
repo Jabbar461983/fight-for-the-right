@@ -95,6 +95,25 @@ function drawInfantry(color: number, faction: Faction, kind: string): HTMLCanvas
   const cy = 22;
   const f = TRIM[faction];
   shadow(ctx, cx, cy, 10, 8);
+  if (kind === 'researcher') {
+    // Forscherin: weisser Kittel, Klemmbrett, Haarknoten, leuchtender Glimmerit-Anhänger
+    rr(ctx, cx + 3, cy - 6, 9, 11, 1.5);
+    fillStroke(ctx, '#c79a5a', 2);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 8, 11, 0, 0, Math.PI * 2);
+    fillStroke(ctx, '#f7f7f2', 2);
+    ctx.fillStyle = rgb(color);
+    ctx.fillRect(cx - 7, cy - 1.5, 3, 3);
+    circle(ctx, cx + 1, cy, 5.5);
+    fillStroke(ctx, '#a4683b', 2);
+    circle(ctx, cx - 4, cy, 2.6);
+    fillStroke(ctx, '#a4683b', 1.5);
+    ctx.fillStyle = '#5ff0ff';
+    circle(ctx, cx + 6, cy, 1.8);
+    ctx.fill();
+    highlight(ctx, cx - 1, cy - 2.5, 1.8);
+    return c;
+  }
   // Rucksack
   if (faction === 'aero') {
     rr(ctx, cx - 13, cy - 7, 9, 14, 5);
@@ -683,6 +702,8 @@ function unitCanvas(def: UnitDef, faction: Faction, color: number, part: 'body' 
       return drawInfantry(color, faction, 'rocket');
     case 'engineer':
       return drawInfantry(color, faction, 'engineer');
+    case 'researcher':
+      return drawInfantry(color, faction, 'researcher');
     case 'jetpackRanger':
       return drawInfantry(color, faction, 'jetpack');
     case 'shieldBearer':

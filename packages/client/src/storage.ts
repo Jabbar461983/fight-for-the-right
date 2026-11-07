@@ -51,6 +51,34 @@ export async function setItem(key: string, value: unknown): Promise<void> {
   });
 }
 
+/** Kampagnenfortschritt: je Mission die geschafften Schwierigkeitsgrade. */
+export interface CampaignProgress {
+  done: Record<string, ('easy' | 'medium' | 'hard')[]>;
+  /** Zuletzt gewählter Schwierigkeitsgrad. */
+  lastDifficulty?: 'easy' | 'medium' | 'hard';
+}
+
+export async function loadProgress(): Promise<CampaignProgress> {
+  const p = await getItem<CampaignProgress>('campaign');
+  return { done: {}, ...(p ?? {}) };
+}
+
+/** Mission geschafft → speichern (schaltet die nächste frei). */
+export async function markMissionDone(id: string, difficulty: 'easy' | 'medium' | 'hard'): Promise<CampaignProgress> {
+  const p = await loadProgress();
+  const list = p.done[id] ?? [];
+  if (!list.includes(difficulty)) list.push(difficulty);
+  p.done[id] = list;
+  await setItem('campaign', p);
+  return p;
+}
+
+export async function saveLastDifficulty(d: 'easy' | 'medium' | 'hard'): Promise<void> {
+  const p = await loadProgress();
+  p.lastDifficulty = d;
+  await setItem('campaign', p);
+}
+
 /** Einstellungen des Spiels. */
 export interface Settings {
   /** Spieltempo im Einzelspieler (1 = normal). */
