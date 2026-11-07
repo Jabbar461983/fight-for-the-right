@@ -565,6 +565,54 @@ export class Simulation {
     if (this.tick % 15 !== 0) this.checkVictory();
   }
 
+  // ───────────────────────────── Netzwerk-Spiegel ─────────────────────────────
+  // Im Mehrspieler rechnet der Server. Der Client hält eine «Spiegel»-Simulation,
+  // die nie step() aufruft, sondern mit diesen Methoden aus Momentaufnahmen befüllt wird.
+
+  /** Fügt eine Einheit ein (oder ersetzt sie) – ohne Ereignisse. */
+  mirrorPutUnit(u: Unit): void {
+    const old = this.unitById.get(u.id);
+    this.unitById.set(u.id, u);
+    if (old) {
+      const i = this.units.indexOf(old);
+      if (i >= 0) this.units[i] = u;
+      return;
+    }
+    // Sortiert einfügen
+    let i = this.units.length;
+    while (i > 0 && this.units[i - 1].id > u.id) i--;
+    this.units.splice(i, 0, u);
+  }
+
+  mirrorRemoveUnit(id: number): void {
+    const u = this.unitById.get(id);
+    if (!u) return;
+    this.unitById.delete(id);
+    this.units = this.units.filter((x) => x !== u);
+  }
+
+  /** Fügt ein Gebäude ein (blockiert die Karte) – ohne Ereignisse. */
+  mirrorPutBuilding(b: Building): void {
+    const old = this.buildingById.get(b.id);
+    if (old) {
+      Object.assign(old, b);
+      return;
+    }
+    this.buildingById.set(b.id, b);
+    let i = this.buildings.length;
+    while (i > 0 && this.buildings[i - 1].id > b.id) i--;
+    this.buildings.splice(i, 0, b);
+    this.map.setBlocked(b.tx, b.ty, b.def.width, b.def.height, 1);
+  }
+
+  mirrorRemoveBuilding(id: number): void {
+    const b = this.buildingById.get(id);
+    if (!b) return;
+    this.buildingById.delete(id);
+    this.buildings = this.buildings.filter((x) => x !== b);
+    this.map.setBlocked(b.tx, b.ty, b.def.width, b.def.height, 0);
+  }
+
   // ───────────────────────────── Hilfen ─────────────────────────────
 
   /** Abstand (Welteinheiten) vom Punkt zum Ziel: bei Gebäuden zum nächsten Punkt der Fläche. */
