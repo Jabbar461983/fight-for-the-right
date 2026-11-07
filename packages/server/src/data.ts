@@ -4,17 +4,21 @@ import buildings from '../../../data/rules/buildings.json';
 import factions from '../../../data/rules/factions.json';
 import ai from '../../../data/rules/ai.json';
 import commonUnits from '../../../data/units/common.json';
+import aeroUnits from '../../../data/units/aero.json';
+import graniteUnits from '../../../data/units/granite.json';
 import kristalltal from '../../../data/maps/kristalltal.json';
 import vierWinde from '../../../data/maps/vier-winde.json';
+import zweiUfer from '../../../data/maps/zwei-ufer.json';
+import archipel from '../../../data/maps/archipel.json';
 
 /**
  * Spieldaten für den Server – dieselben Dateien wie im Client.
  * Beim Bauen (esbuild) werden sie in die Server-Datei eingebettet.
  */
 
-export const rules: Rules = loadRules({ weapons, buildings, factions, ai, units: [commonUnits] });
+export const rules: Rules = loadRules({ weapons, buildings, factions, ai, units: [commonUnits, aeroUnits, graniteUnits] });
 
-const MAPS: Record<string, unknown> = { kristalltal, 'vier-winde': vierWinde };
+const MAPS: Record<string, unknown> = { kristalltal, 'vier-winde': vierWinde, 'zwei-ufer': zweiUfer, archipel };
 
 export function hasMap(id: string): boolean {
   return id in MAPS;
