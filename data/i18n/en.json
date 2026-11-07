@@ -259,7 +259,8 @@
   "help.mouse.transport": "Select units, right-click your own transport/bunker: board",
   "help.touch.transport": "Select units, tap your own transport/bunker: board",
 
-  "settings.lowFx": "Fewer effects (for older tablets)",`n  "settings.lowFxHint": "Saves performance: no muzzle flashes, smaller explosions.",
+  "settings.lowFx": "Fewer effects (for older tablets)",
+  "settings.lowFxHint": "Saves performance: no muzzle flashes, smaller explosions.",
   "unit.researcher": "Researcher",
   "map.nebelwald.name": "Misty Woods",
 
