@@ -272,8 +272,16 @@ function kristalltal() {
   m.object('crystal', 'crystalField', 17.5, 58, () => ({ radius: 2.5, amount: 6000 }));
   m.object('crystalWest', 'crystalField', 5, 33, () => ({ radius: 2, amount: 4000 }));
   m.object('crystalEast', 'crystalField', 42, 50, () => ({ radius: 2.5, amount: 5000 }));
+  bonus(m, 31, 58);
+  bonus(m, 21, 30);
 
   return m.toTiled({ nameKey: 'map.kristalltal.name', maxPlayers: 2 });
+}
+
+/** Bonus-Punkt (Glimmerit-Quelle, 2×2) mit freigeräumtem Platz drumherum. */
+function bonus(m: MapBuilder, x: number, y: number) {
+  m.disc(x, y, 2.3, T.grass, (old) => old !== T.water && old !== T.road && old !== T.bridge);
+  m.object('bonus', 'bonusSource', x, y, () => ({}));
 }
 
 // ───────────── Karte «Vier Winde» (4 Spieler, Landkarte, Mitte voller Glimmerit) ─────────────
@@ -313,8 +321,91 @@ function vierWinde() {
   m.object('crystal', 'crystalField', 19, 5.5, () => ({ radius: 2.5, amount: 6000 }));
   m.object('crystalSide', 'crystalField', 5.5, 31, () => ({ radius: 2, amount: 4000 }));
   m.object('crystalCenter', 'crystalField', 40, 40, () => ({ radius: 6, amount: 20000, perTile: 650 }));
+  bonus(m, 40, 25);
 
   return m.toTiled({ nameKey: 'map.vierWinde.name', maxPlayers: 4 });
+}
+
+// ───────────── Karte «Zwei Ufer» (2 Spieler, Fluss mit Brücken, Seekampf möglich) ─────────────
+
+function zweiUfer() {
+  const m = new MapBuilder(72, 56);
+  const sand = valueNoise(53, 7, 72);
+  const forest = valueNoise(61, 5, 72);
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      const [cx, cy] = m.canon(x, y);
+      if (forest(cx, cy) > 0.72) m.set(x, y, T.forest, false);
+      else if (sand(cx, cy) > 0.68) m.set(x, y, T.sand, false);
+    }
+  }
+  // Breiter, leicht geschwungener Fluss von oben nach unten (Mitte x ≈ 35.5)
+  for (let y = 0; y < m.h; y++) {
+    const cx = 35.5 + Math.sin(y / 7) * 2.5;
+    for (let x = Math.floor(cx - 3.5); x <= Math.ceil(cx + 3.5); x++) {
+      if (Math.abs(x - cx) <= 3.3) m.set(x, y, T.water);
+    }
+  }
+  // Seitenarm (Bucht) zu jeder Basis – dort lässt sich eine Werft bauen
+  m.line(18, 42, 33, 42, 4, () => T.water);
+  // Sandstrände entlang des Ufers
+  const shore = (old: number) => (old === T.grass || old === T.forest ? T.sand : old);
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      if (m.get(x, y) === T.water) continue;
+      const nearWater = [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => m.get(Math.max(0, Math.min(m.w - 1, x + dx)), Math.max(0, Math.min(m.h - 1, y + dy))) === T.water));
+      if (nearWater) m.set(x, y, shore(m.get(x, y)), false);
+    }
+  }
+  // Basisfläche
+  m.disc(10, 45, 7, T.grass);
+  // Strassen zu drei Brücken (Wasser → Brücke)
+  const road = (old: number) => (old === T.water || old === T.bridge ? T.bridge : T.road);
+  m.polyline([[10, 45], [10, 30], [24, 26], [48, 26]], 2, road); // mittlere Brücke
+  m.polyline([[10, 45], [20, 50], [44, 50], [52, 46]], 2, road); // untere Brücke
+  // Klippen als Deckung
+  m.line(24, 32, 28, 36, 1, () => T.cliff);
+
+  m.object('spawn', 'spawn', 10.5, 45.5, (i) => ({ player: i + 1 }));
+  m.object('crystal', 'crystalField', 4.5, 37, () => ({ radius: 2.5, amount: 6000 }));
+  m.object('crystalRiver', 'crystalField', 26, 18, () => ({ radius: 2.5, amount: 5000 }));
+  bonus(m, 20, 34);
+  return m.toTiled({ nameKey: 'map.zweiUfer.name', maxPlayers: 2 });
+}
+
+// ───────────── Karte «Archipel» (4 Spieler, Inseln – Luft und See entscheiden) ─────────────
+
+function archipel() {
+  const m = new MapBuilder(96, 96, 4);
+  for (let i = 0; i < m.data.length; i++) m.data[i] = T.water;
+  const forest = valueNoise(71, 4, 96);
+  const island = (cx: number, cy: number, r: number) => {
+    m.disc(cx, cy, r + 1.2, T.sand);
+    m.disc(cx, cy, r, T.grass);
+  };
+  island(17, 17, 12); // Basisinsel
+  island(48, 14, 5.5); // kleine Insel zwischen zwei Basen
+  island(47.5, 47.5, 9); // Mittelinsel
+  island(28, 34, 3); // Trittstein
+  // Wald auf den Inseln (nicht am Strand)
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      if (m.get(x, y) !== T.grass) continue;
+      const [cx, cy] = m.canon(x, y);
+      if (forest(cx, cy) > 0.74) m.set(x, y, T.forest, false);
+    }
+  }
+  m.disc(15, 15, 6.5, T.grass);
+  m.line(9, 24, 12, 27, 1, () => T.cliff);
+  // Strasse zur Küste
+  m.polyline([[15, 15], [22, 22]], 2, (old) => (old === T.water ? T.bridge : T.road));
+
+  m.object('spawn', 'spawn', 15.5, 15.5, (i) => ({ player: i + 1 }));
+  m.object('crystal', 'crystalField', 22, 9, () => ({ radius: 2.5, amount: 6000 }));
+  m.object('crystalSide', 'crystalField', 48, 13, () => ({ radius: 2.5, amount: 5000 }));
+  m.object('crystalCenter', 'crystalField', 48, 48, () => ({ radius: 4.5, amount: 16000, perTile: 650 }));
+  bonus(m, 48, 39.5);
+  return m.toTiled({ nameKey: 'map.archipel.name', maxPlayers: 4 });
 }
 
 // ───────────── Tileset-Bild (einfarbig, nur für den Editor) ─────────────
@@ -376,6 +467,8 @@ const EDITOR_COLORS: [number, number, number][] = [
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(join(OUT_DIR, 'kristalltal.json'), JSON.stringify(kristalltal()) + '\n');
 writeFileSync(join(OUT_DIR, 'vier-winde.json'), JSON.stringify(vierWinde()) + '\n');
+writeFileSync(join(OUT_DIR, 'zwei-ufer.json'), JSON.stringify(zweiUfer()) + '\n');
+writeFileSync(join(OUT_DIR, 'archipel.json'), JSON.stringify(archipel()) + '\n');
 writeFileSync(
   join(OUT_DIR, 'terrain-tiles.png'),
   png(TILE_PX * TERRAINS.length, TILE_PX, (x, y) => {
