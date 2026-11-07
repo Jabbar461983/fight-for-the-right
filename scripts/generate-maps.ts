@@ -60,22 +60,32 @@ class MapBuilder {
 
   readonly w: number;
   readonly h: number;
+  /** 2 = punktsymmetrisch (180°), 4 = vierfach drehsymmetrisch (90°, nur quadratische Karten). */
+  readonly sym: 2 | 4;
 
-  constructor(w: number, h: number) {
+  constructor(w: number, h: number, sym: 2 | 4 = 2) {
     this.w = w;
     this.h = h;
+    this.sym = sym;
+    if (sym === 4 && w !== h) throw new Error('Vierfach-Symmetrie braucht eine quadratische Karte');
     this.data = new Array(w * h).fill(T.grass);
   }
 
-  /** Gespiegelte Kachel (180° um die Kartenmitte). */
-  mirror(x: number, y: number): [number, number] {
-    return [this.w - 1 - x, this.h - 1 - y];
+  /** Alle symmetrischen Bilder einer Kachel (das erste ist die Kachel selbst). */
+  images(x: number, y: number): [number, number][] {
+    const W = this.w - 1;
+    const H = this.h - 1;
+    if (this.sym === 2) return [[x, y], [W - x, H - y]];
+    return [[x, y], [W - y, x], [W - x, H - y], [y, H - x]];
   }
 
-  /** Kanonische Koordinate: aus jedem Spiegelpaar immer dieselbe – für symmetrisches Rauschen. */
+  /** Kanonische Koordinate: aus jeder Symmetriegruppe immer dieselbe – für symmetrisches Rauschen. */
   canon(x: number, y: number): [number, number] {
-    const [mx, my] = this.mirror(x, y);
-    return y * this.w + x <= my * this.w + mx ? [x, y] : [mx, my];
+    let best: [number, number] = [x, y];
+    for (const [ix, iy] of this.images(x, y)) {
+      if (iy * this.w + ix < best[1] * this.w + best[0]) best = [ix, iy];
+    }
+    return best;
   }
 
   set(x: number, y: number, t: number, symmetric = true) {
@@ -83,8 +93,8 @@ class MapBuilder {
       if (px < 0 || py < 0 || px >= this.w || py >= this.h) return;
       this.data[py * this.w + px] = t;
     };
-    put(x, y);
-    if (symmetric) put(...this.mirror(x, y));
+    if (!symmetric) put(x, y);
+    else for (const [ix, iy] of this.images(x, y)) put(ix, iy);
   }
 
   get(x: number, y: number) {
@@ -125,13 +135,20 @@ class MapBuilder {
     }
   }
 
-  /** Objekt (Kachelkoordinaten) plus gespiegeltes Gegenstück. */
-  object(name: string, type: string, x: number, y: number, props: Record<string, number | string>, mirrorProps?: Record<string, number | string>) {
-    this.objects.push({ name, type, x, y, props });
-    if (mirrorProps) {
-      const [mx, my] = [this.w - x, this.h - y];
-      this.objects.push({ name: name.replace(/1$/, '2'), type, x: mx, y: my, props: mirrorProps });
-    }
+  /**
+   * Objekt (Kachelkoordinaten, Kommazahlen erlaubt) samt symmetrischen Kopien.
+   * `props(i)` liefert die Eigenschaften der i-ten Kopie (0 = Original), z.B. die Spielernummer.
+   */
+  object(name: string, type: string, x: number, y: number, props: (i: number) => Record<string, number | string>, copies = true) {
+    const W = this.w;
+    const H = this.h;
+    const pts: [number, number][] =
+      this.sym === 2 ? [[x, y], [W - x, H - y]] : [[x, y], [W - y, x], [W - x, H - y], [y, H - x]];
+    // Objekt genau in der Mitte: nur einmal
+    const unique = pts.filter((p, i) => pts.findIndex((q) => q[0] === p[0] && q[1] === p[1]) === i);
+    (copies ? unique : unique.slice(0, 1)).forEach(([px, py], i) => {
+      this.objects.push({ name: `${name}${i + 1}`, type, x: px, y: py, props: props(i) });
+    });
   }
 
   toTiled(props: Record<string, number | string>) {
@@ -251,12 +268,53 @@ function kristalltal() {
   m.polyline([[27, 27], [27, 36]], 2, road);
 
   // Startpunkte und Glimmerit-Felder (Kachelkoordinaten; Mitte der Kachel = +0.5)
-  m.object('spawn1', 'spawn', 10.5, 53.5, { player: 1 }, { player: 2 });
-  m.object('crystal1', 'crystalField', 17.5, 58, { radius: 2.5, amount: 6000 }, { radius: 2.5, amount: 6000 });
-  m.object('crystalWest1', 'crystalField', 5, 33, { radius: 2, amount: 4000 }, { radius: 2, amount: 4000 });
-  m.object('crystalEast1', 'crystalField', 42, 50, { radius: 2.5, amount: 5000 }, { radius: 2.5, amount: 5000 });
+  m.object('spawn', 'spawn', 10.5, 53.5, (i) => ({ player: i + 1 }));
+  m.object('crystal', 'crystalField', 17.5, 58, () => ({ radius: 2.5, amount: 6000 }));
+  m.object('crystalWest', 'crystalField', 5, 33, () => ({ radius: 2, amount: 4000 }));
+  m.object('crystalEast', 'crystalField', 42, 50, () => ({ radius: 2.5, amount: 5000 }));
 
   return m.toTiled({ nameKey: 'map.kristalltal.name', maxPlayers: 2 });
+}
+
+// ───────────── Karte «Vier Winde» (4 Spieler, Landkarte, Mitte voller Glimmerit) ─────────────
+
+function vierWinde() {
+  const m = new MapBuilder(80, 80, 4);
+  const sand = valueNoise(31, 7, 80);
+  const forest = valueNoise(47, 5, 80);
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      const [cx, cy] = m.canon(x, y);
+      if (forest(cx, cy) > 0.72) m.set(x, y, T.forest, false);
+      else if (sand(cx, cy) > 0.66) m.set(x, y, T.sand, false);
+    }
+  }
+  // Sandiges Kristallbecken in der Mitte
+  m.disc(39.5, 39.5, 9, T.sand);
+  // Seen in der Mitte jeder Kartenseite (zwischen zwei Basen)
+  m.disc(39.5, 9, 3.5, T.water);
+  // Klippenbögen schützen die Mitte, Zugänge bleiben auf den Achsen frei
+  const cliff = () => T.cliff;
+  m.polyline([[29, 33], [31, 30], [33, 29]], 2, cliff);
+  // Klippe vor jeder Basis mit zwei Lücken
+  m.line(4, 22, 9, 22, 1, cliff);
+  m.line(15, 22, 22, 22, 1, cliff);
+  m.line(22, 4, 22, 9, 1, cliff);
+  m.line(22, 15, 22, 21, 1, cliff);
+  // Basisflächen frei
+  m.disc(12, 12, 7, T.grass);
+  // Strassen: von jeder Basis zur Mitte und zur Nachbarbasis
+  const road = (old: number) => (old === T.water || old === T.bridge ? T.bridge : T.road);
+  m.polyline([[12, 12], [18, 18], [26, 26], [33, 33]], 2, road);
+  m.polyline([[12, 12], [12, 26], [16, 34]], 2, road);
+  m.polyline([[12, 12], [26, 12], [34, 16], [46, 16]], 2, road);
+
+  m.object('spawn', 'spawn', 12.5, 12.5, (i) => ({ player: i + 1 }));
+  m.object('crystal', 'crystalField', 19, 5.5, () => ({ radius: 2.5, amount: 6000 }));
+  m.object('crystalSide', 'crystalField', 5.5, 31, () => ({ radius: 2, amount: 4000 }));
+  m.object('crystalCenter', 'crystalField', 40, 40, () => ({ radius: 6, amount: 20000, perTile: 650 }));
+
+  return m.toTiled({ nameKey: 'map.vierWinde.name', maxPlayers: 4 });
 }
 
 // ───────────── Tileset-Bild (einfarbig, nur für den Editor) ─────────────
@@ -317,6 +375,7 @@ const EDITOR_COLORS: [number, number, number][] = [
 
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(join(OUT_DIR, 'kristalltal.json'), JSON.stringify(kristalltal()) + '\n');
+writeFileSync(join(OUT_DIR, 'vier-winde.json'), JSON.stringify(vierWinde()) + '\n');
 writeFileSync(
   join(OUT_DIR, 'terrain-tiles.png'),
   png(TILE_PX * TERRAINS.length, TILE_PX, (x, y) => {
