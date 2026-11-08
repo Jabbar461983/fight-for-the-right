@@ -140,10 +140,17 @@ export class SkirmishAi implements TickListener {
     const armySize = sim.units.filter((u) => !u.dead && u.owner === p.id && u.def.weapon && !u.def.harvestCapacity).length;
     // Mittel/Schwer: Türme und teure Technik erst mit Armee im Rücken oder vollem Konto
     const rich = this.level === 'easy' || p.credits > 1500 || (armySize >= 12 && sim.tick > 15 * 60 * 7);
+    // Mittel/Schwer: steht die Fabrik, zuerst eine Mindestarmee (wächst mit der Spielzeit) –
+    // sonst fliesst alles Geld in Gebäude und ein früher Angriff überrennt die Basis.
+    // Kraftwerke und Raffinerien (Wirtschaft) gehen immer.
+    const minutes = sim.tick / (15 * 60);
+    const minArmy = Math.min(14, Math.floor(4 + minutes * 1.2));
+    const armyFirst = this.level !== 'easy' && economyReady && armySize < minArmy && p.credits < 1500;
     for (const cat of ['building', 'defense'] as const) {
       if (p.queues[cat].length > 0 || p.ready[cat]) continue;
       if (cat === 'defense' && (!economyReady || (!rich && (owned.get('mgTower') ?? 0) > 0))) continue;
       const pick = this.nextBuilding(sim, p, owned, cat, rich);
+      if (pick && armyFirst && pick !== 'powerPlant' && pick !== 'refinery') continue;
       if (pick) sim.issue(this.player, { type: 'queue', category: cat, item: pick, action: 'add' });
     }
   }
@@ -514,7 +521,18 @@ export class SkirmishAi implements TickListener {
   private attack(sim: Simulation, p: Player, army: Unit[], base: { x: number; y: number }): void {
     // Landeinheiten, die den Gegner nicht erreichen können (Inselkarte), bleiben zur Verteidigung daheim
     const mobile = army.filter((u) => this.landConnected !== false || u.def.moveClassId === MoveClass.Air || u.def.moveClassId === MoveClass.Naval || u.def.moveClassId === MoveClass.Hover);
-    const idle = mobile.filter((u) => !u.task && !u.order);
+    const far2 = (22 * TILE) ** 2;
+    const isFar = (u: Unit) => (u.x - base.x) ** 2 + (u.y - base.y) ** 2 > far2;
+    // Truppen, die schon weit draussen stehen (Welle am Ziel angekommen): weiter zum nächsten
+    // bekannten Gebäude, statt quer durch die gegnerische Basis heimzulaufen
+    const pushing = mobile.filter((u) => !u.task && !u.order && isFar(u));
+    if (pushing.length > 0) {
+      const cx = Math.trunc(pushing.reduce((s, u) => s + u.x, 0) / pushing.length);
+      const cy = Math.trunc(pushing.reduce((s, u) => s + u.y, 0) / pushing.length);
+      const next = this.attackTarget(sim, { x: cx, y: cy });
+      sim.issue(this.player, { type: 'attackMove', units: pushing.map((u) => u.id), x: next.x, y: next.y });
+    }
+    const idle = mobile.filter((u) => !u.task && !u.order && !isFar(u));
     // Nur mit schlagkräftiger Welle angreifen: mindestens ein Drittel Fahrzeuge/Flieger/Schiffe
     const heavy = idle.filter((u) => u.def.category !== 'infantry').length;
     // Klügere Stufen greifen erst mit klarer Überlegenheit an (nur Gesehenes zählt)
@@ -522,7 +540,9 @@ export class SkirmishAi implements TickListener {
       this.cfg.attackAdvantage <= 0 ||
       idle.reduce((s, u) => s + this.value(u), 0) >= this.cfg.attackAdvantage * this.knownEnemyStrength(sim, p) ||
       army.length >= this.cfg.maxArmy * 0.8; // Armee voll → Warten bringt nichts mehr
-    if (sim.tick >= this.nextAttack && idle.length >= this.waveSize && heavy * 3 >= idle.length && strongEnough) {
+    // Zu wenig Fahrzeuge? Bei grosser oder voller Armee trotzdem los – sonst wartet die KI ewig
+    const mixOk = heavy * 3 >= idle.length || idle.length >= this.waveSize * 2 || army.length >= this.cfg.maxArmy * 0.8;
+    if (sim.tick >= this.nextAttack && idle.length >= this.waveSize && mixOk && strongEnough) {
       const target = this.attackTarget(sim, base);
       const ids = idle.map((u) => u.id);
       if (this.cfg.twoFronts && ids.length >= 8) {
@@ -552,7 +572,7 @@ export class SkirmishAi implements TickListener {
     // Sonst: freie Truppen am Sammelpunkt vor der Basis versammeln
     const dir = this.enemyDirection(sim, base);
     const rally = { x: base.x + dir.dx * 7, y: base.y + dir.dy * 7 };
-    const stray = army.filter((u) => !u.task && !u.order && (u.x - rally.x) ** 2 + (u.y - rally.y) ** 2 > (6 * TILE) ** 2);
+    const stray = army.filter((u) => !u.task && !u.order && !isFar(u) && (u.x - rally.x) ** 2 + (u.y - rally.y) ** 2 > (6 * TILE) ** 2);
     if (stray.length > 0) sim.issue(this.player, { type: 'move', units: stray.map((u) => u.id), x: rally.x, y: rally.y });
   }
 }

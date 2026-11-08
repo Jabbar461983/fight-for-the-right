@@ -25,7 +25,8 @@ describe('Regeln', () => {
   it('lädt alle Dateien und rechnet Fraktionsunterschiede ein', () => {
     const aero = rules.unit('aero', 'rifleman')!;
     const granite = rules.unit('granite', 'rifleman')!;
-    expect(aero.cost).toBeLessThan(granite.cost);
+    // Preise sind auf Zehner gerundet – der Unterschied zeigt sich bei teureren Einheiten
+    expect(rules.unit('aero', 'lightTank')!.cost).toBeLessThan(rules.unit('granite', 'lightTank')!.cost);
     expect(aero.speedUnits).toBeGreaterThan(granite.speedUnits);
     expect(aero.hp).toBeLessThan(granite.hp);
     expect(aero.weapon?.id).toBe('rifle');
