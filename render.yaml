@@ -13,14 +13,9 @@ services:
     startCommand: npm run start:server
     healthCheckPath: /health
     autoDeployTrigger: checksPass
-    buildFilter:
-      paths:
-        - packages/server/**
-        - packages/shared/**
-        - data/**
-        - package.json
-        - package-lock.json
-        - render.yaml
+    # Absichtlich KEIN buildFilter: Render prüfte damit nur den letzten Commit eines Pushs –
+    # endete ein Push mit einem Doku-Commit, blieb der Server alt, während der Client neu war
+    # (verschiedene Inhalte → eingefrorene Partien). Lieber jedes Mal neu starten.
     envVars:
       - key: NODE_VERSION
         value: '24'

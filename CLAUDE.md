@@ -137,7 +137,9 @@ markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt d
   müssen dieselben Inhalte haben. `netVersion(rules)` (Fingerabdruck, `NET_PROTOCOL` bei Formatänderung erhöhen)
   steht in `/health` und wird beim Erstellen/Beitreten mitgeschickt; passt sie nicht → Meldung `mp.err.version`.
   Ursache der Abstürze 8.11.2026: Render hatte seit den 6 Teams nicht mehr neu deployt (alter Server, neuer Client
-  → falsche Typen in den Aufnahmen → eingefrorener Bildschirm). Nach jedem Push prüfen: `/health` → `version`, `uptime`.
+  → falsche Typen in den Aufnahmen → eingefrorener Bildschirm), weil jeder Push mit einem Doku-Commit endete und der
+  `buildFilter` nur diesen ansah. `buildFilter` ist entfernt (jeder grüne Push startet den Server neu).
+  Nach jedem Push prüfen: `/health` → `version`, `uptime`.
 - KI hinzufügen: Knopf «+ Computergegner» immer sichtbar (Gefecht und Lobby-Gastgeber); ist die Karte voll,
   wird automatisch auf eine Karte mit mehr Plätzen gewechselt (sonst war z.B. «Gemeinsam gegen KI» zu zweit
   auf einer 2er-Karte unmöglich).
