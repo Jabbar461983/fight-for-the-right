@@ -81,6 +81,7 @@ describe('Missionen', () => {
 
   it('A1 Tutorial: Ziele kommen nacheinander, Aussenposten zerstört → Sieg', () => {
     const { sim, mission: m } = start('a1', 'easy');
+    expect(m.highlight).toBe('cmd:deploy');
     const yardDef = rules.building('aero', 'constructionYard')!;
     const wagon = sim.units.find((u) => u.owner === 1 && u.def.deploysTo)!;
     sim.issue(1, { type: 'deploy', units: [wagon.id] });
@@ -89,6 +90,8 @@ describe('Missionen', () => {
     run(sim, 10);
     expect(m.objectives.find((o) => o.id === 'deploy')?.status).toBe('done');
     expect(m.objectives.find((o) => o.id === 'power')?.status).toBe('open');
+    // Tutorial-Hinweis wandert vom Ausfahren-Knopf zum Kraftwerk
+    expect(m.highlight).toBe('build:powerPlant');
     // Gebäude der Reihe nach hinstellen (abgekürzt)
     const yard = sim.buildings.find((b) => b.owner === 1 && b.def.constructionYard)!;
     let x = yard.tx - 8;

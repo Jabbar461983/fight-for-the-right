@@ -99,6 +99,8 @@ const Action = z.discriminatedUnion('type', [
   z.object({ type: z.literal('flag'), name: z.string(), difficulty: Difficulty }),
   /** Computergegner einschalten (Stufe = Schwierigkeit der Mission, wenn nicht angegeben). */
   z.object({ type: z.literal('ai'), owner: Owner, level: z.enum(AI_LEVELS).optional(), difficulty: Difficulty }),
+  /** Tutorial: Knopf pulsieren lassen («cmd:deploy», «tab:infantry», «build:powerPlant»; null = aus). */
+  z.object({ type: z.literal('highlight'), target: z.string().regex(/^(cmd|tab|build):[a-zA-Z]+$/).nullable(), difficulty: Difficulty }),
   /** Sichtbarer Countdown (z.B. «Durchhalten: 14:59»). */
   z.object({ type: z.literal('countdown'), seconds: Num, key: z.string(), difficulty: Difficulty }),
   z.object({ type: z.literal('victory'), difficulty: Difficulty }),
@@ -190,6 +192,8 @@ export class Mission implements TickListener {
   /** Countdown für die Anzeige: Ende in Ticks. */
   countdown: { endTick: number; key: string } | null = null;
   result: 'victory' | 'defeat' | null = null;
+  /** Aktueller Tutorial-Hinweis (Knopf, der pulsiert). */
+  highlight: string | null = null;
   private readonly tags = new Map<string, number[]>();
   private readonly flags = new Set<string>();
   /** Je Ereignis: schon ausgelöst bzw. nächster Zeitpunkt (für «every») und Anzahl Auslösungen. */
@@ -414,6 +418,10 @@ export class Mission implements TickListener {
       case 'countdown':
         this.countdown = { endTick: sim.tick + this.ticks(a.seconds), key: a.key };
         break;
+      case 'highlight':
+        this.highlight = a.target;
+        sim.emit({ type: 'highlight', target: a.target });
+        break;
       case 'victory':
       case 'defeat':
         this.finish(a.type === 'victory', a.type === 'defeat' ? a.key : undefined);
@@ -425,6 +433,10 @@ export class Mission implements TickListener {
     const sim = this.sim;
     this.result = victory ? 'victory' : 'defeat';
     this.countdown = null;
+    if (this.highlight) {
+      this.highlight = null;
+      sim.emit({ type: 'highlight', target: null });
+    }
     if (victory) for (const o of this.objectives) if (o.status === 'open') o.status = 'done';
     const me = sim.players[1];
     const winners = victory ? [1] : sim.playerList.filter((p) => !sim.isAlly(1, p.id)).map((p) => p.id);

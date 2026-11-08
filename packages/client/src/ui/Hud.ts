@@ -370,6 +370,40 @@ export class Hud {
       state.hidden = !text;
       state.textContent = text;
     }
+    if (this.highlight) this.applyHighlight();
+  }
+
+  // ───────────── Tutorial-Hinweis: pulsierender Knopf ─────────────
+
+  private highlight: string | null = null;
+
+  /** Ziel: «cmd:deploy», «tab:infantry», «build:powerPlant» oder null. */
+  setHighlight(target: string | null): void {
+    this.highlight = target;
+    this.applyHighlight();
+  }
+
+  private applyHighlight(): void {
+    document.querySelectorAll('.hint').forEach((e) => e.classList.remove('hint'));
+    if (!this.highlight) return;
+    const [kind, id] = this.highlight.split(':');
+    let el: Element | null = null;
+    let inSidebar = true;
+    if (kind === 'cmd') {
+      el = this.commandBar.querySelector(`[data-cmd="${id}"]`);
+      inSidebar = false;
+    } else if (kind === 'tab') el = this.sidebar.querySelector(`[data-tab="${id}"]`);
+    else if (kind === 'build') {
+      const item = this.items.find((i) => i.id === id);
+      // Liegt das Ziel in einem anderen Reiter, zuerst den Reiter zeigen
+      el =
+        item && item.category !== this.tab
+          ? this.sidebar.querySelector(`[data-tab="${item.category}"]`)
+          : this.els['build-grid']?.querySelector(`[data-id="${id}"]`) ?? null;
+    }
+    // Auf dem Handy ist die Seitenleiste vielleicht zugeklappt → den Aufklapp-Knopf zeigen
+    if (inSidebar && this.sidebar.classList.contains('collapsed')) el = this.sidebar.querySelector('.sb-toggle');
+    el?.classList.add('hint');
   }
 
   setPlacing(placing: boolean, touch: boolean): void {
@@ -409,6 +443,7 @@ export class Hud {
     }
     bar.innerHTML = html;
     bar.classList.toggle('has-selection', s.hasUnits || !!s.building || s.placing);
+    if (this.highlight) this.applyHighlight();
     const on = (cmd: string, fn: () => void) => bar.querySelector(`[data-cmd="${cmd}"]`)?.addEventListener('click', fn);
     on('stop', () => this.actions.stop());
     on('attack', () => this.actions.armAttack());

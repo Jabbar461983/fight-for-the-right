@@ -715,6 +715,9 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           }
           else this.hud.message(t('mission.objectiveFailed', { text: t(e.key) }), 'warn');
           break;
+        case 'highlight':
+          this.hud.setHighlight(e.target);
+          break;
         case 'missionEnd':
           this.missionEndKey = e.reasonKey;
           if (e.victory && this.cfg.mission) void markMissionDone(this.cfg.mission.id, this.cfg.mission.difficulty);

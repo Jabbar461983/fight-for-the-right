@@ -30,7 +30,8 @@
         { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 3, "medium": 4, "hard": 6 }, "at": "outpost", "tag": "guards" },
         { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 0, "medium": 1, "hard": 2 }, "at": "outpostGate", "tag": "guards" },
         { "type": "message", "key": "mission.a1.m.welcome" },
-        { "type": "objective", "id": "deploy", "key": "mission.a1.o.deploy" }
+        { "type": "objective", "id": "deploy", "key": "mission.a1.o.deploy" },
+        { "type": "highlight", "target": "cmd:deploy" }
       ]
     },
     {
@@ -38,7 +39,8 @@
       "do": [
         { "type": "complete", "id": "deploy" },
         { "type": "message", "key": "mission.a1.m.power" },
-        { "type": "objective", "id": "power", "key": "mission.a1.o.power" }
+        { "type": "objective", "id": "power", "key": "mission.a1.o.power" },
+        { "type": "highlight", "target": "build:powerPlant" }
       ]
     },
     {
@@ -46,7 +48,8 @@
       "do": [
         { "type": "complete", "id": "power" },
         { "type": "message", "key": "mission.a1.m.refinery" },
-        { "type": "objective", "id": "refinery", "key": "mission.a1.o.refinery" }
+        { "type": "objective", "id": "refinery", "key": "mission.a1.o.refinery" },
+        { "type": "highlight", "target": "build:refinery" }
       ]
     },
     {
@@ -54,7 +57,8 @@
       "do": [
         { "type": "complete", "id": "refinery" },
         { "type": "message", "key": "mission.a1.m.barracks" },
-        { "type": "objective", "id": "barracks", "key": "mission.a1.o.barracks" }
+        { "type": "objective", "id": "barracks", "key": "mission.a1.o.barracks" },
+        { "type": "highlight", "target": "build:barracks" }
       ]
     },
     {
@@ -62,7 +66,8 @@
       "do": [
         { "type": "complete", "id": "barracks" },
         { "type": "message", "key": "mission.a1.m.factory" },
-        { "type": "objective", "id": "factory", "key": "mission.a1.o.factory" }
+        { "type": "objective", "id": "factory", "key": "mission.a1.o.factory" },
+        { "type": "highlight", "target": "build:factory" }
       ]
     },
     {
@@ -70,7 +75,8 @@
       "do": [
         { "type": "complete", "id": "factory" },
         { "type": "message", "key": "mission.a1.m.army" },
-        { "type": "objective", "id": "army", "key": "mission.a1.o.army" }
+        { "type": "objective", "id": "army", "key": "mission.a1.o.army" },
+        { "type": "highlight", "target": "build:lightTank" }
       ]
     },
     {
@@ -79,7 +85,8 @@
         { "type": "complete", "id": "army" },
         { "type": "reveal", "area": "outpost" },
         { "type": "message", "key": "mission.a1.m.attack" },
-        { "type": "objective", "id": "outpost", "key": "mission.a1.o.outpost" }
+        { "type": "objective", "id": "outpost", "key": "mission.a1.o.outpost" },
+        { "type": "highlight", "target": "cmd:attack" }
       ]
     },
     {

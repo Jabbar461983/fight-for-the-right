@@ -1483,3 +1483,35 @@ td:first-child {
   color: var(--warn);
   font-weight: 700;
 }
+
+/* Tutorial-Hinweis: pulsierender Knopf mit Pfeil */
+.hint {
+  position: relative;
+  animation: hint-pulse 1s ease-in-out infinite;
+  outline: 4px solid var(--accent-2);
+  outline-offset: 2px;
+  z-index: 3;
+}
+
+.hint::before {
+  content: '👇';
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+  font-size: 22px;
+  animation: hint-bounce 0.8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes hint-pulse {
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 207, 74, 0.45);
+  }
+}
+
+@keyframes hint-bounce {
+  to {
+    transform: translate(-50%, -6px);
+  }
+}

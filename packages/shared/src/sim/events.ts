@@ -29,4 +29,5 @@ export type SimEvent =
   | { type: 'radio'; key: string; speaker: string }
   | { type: 'objective'; id: string; key: string; status: 'open' | 'done' | 'failed' }
   | { type: 'missionEnd'; victory: boolean; reasonKey?: string }
+  | { type: 'highlight'; target: string | null }
   | { type: 'gameOver'; winners: number[] };
