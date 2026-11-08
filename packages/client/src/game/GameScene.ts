@@ -980,6 +980,8 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       }
     }
 
+    this.drawObjectiveMarkers(g);
+
     // Pings von Verbündeten: pulsierende Ringe
     this.pings = this.pings.filter((p) => (p.age += dt) < 4);
     for (const p of this.pings) {
@@ -1059,6 +1061,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     if (!p.hasRadar) {
       ctx.fillStyle = '#11121d';
       ctx.fillRect(0, 0, mm.width, mm.height);
+      this.drawMinimapObjectives(ctx, sx, sy);
       return;
     }
     ctx.drawImage(this.minimapBase, 0, 0, mm.width, mm.height);
@@ -1100,6 +1103,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       ctx.arc((pg.x / TILE_PX) * sx, (pg.y / TILE_PX) * sy, 4 + (pg.age % 1) * 6, 0, Math.PI * 2);
       ctx.stroke();
     }
+    this.drawMinimapObjectives(ctx, sx, sy);
     // Kamera-Rahmen
     const view = this.cameras.main.worldView;
     ctx.strokeStyle = '#ffffff';
@@ -1837,6 +1841,68 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
   toggleObjectives(): void {
     this.hud.toggleObjectives();
+  }
+
+  /** Offene Missionsziele mit Gebiet (Kacheln). */
+  private markedObjectives(): [number, number, number, number][] {
+    if (!this.mission) return [];
+    return this.mission.objectives.filter((o) => o.status === 'open' && o.area).map((o) => o.area!);
+  }
+
+  focusArea(area: [number, number, number, number]): void {
+    this.centerOnWorldPx((area[0] + area[2] / 2) * TILE_PX, (area[1] + area[3] / 2) * TILE_PX);
+  }
+
+  /** Zielmarkierung: Fähnchen mit pulsierendem Ring; ausserhalb des Bildes ein Pfeil am Rand. */
+  private drawObjectiveMarkers(g: Phaser.GameObjects.Graphics): void {
+    const view = this.cameras.main.worldView;
+    const pulse = (this.time.now / 900) % 1;
+    for (const a of this.markedObjectives()) {
+      const x = (a[0] + a[2] / 2) * TILE_PX;
+      const y = (a[1] + a[3] / 2) * TILE_PX;
+      const r = (Math.max(a[2], a[3]) * TILE_PX) / 2;
+      g.lineStyle(3, 0xffcf4a, 0.9);
+      g.strokeRect(a[0] * TILE_PX, a[1] * TILE_PX, a[2] * TILE_PX, a[3] * TILE_PX);
+      g.lineStyle(4, 0xffcf4a, 1 - pulse);
+      g.strokeCircle(x, y, r * (0.4 + pulse * 0.6));
+      // Fähnchen
+      g.lineStyle(3, 0x1d1a2b, 1);
+      g.lineBetween(x, y, x, y - 34);
+      g.fillStyle(0xffcf4a, 1);
+      g.fillTriangle(x, y - 34, x + 18, y - 28, x, y - 22);
+      if (view.width > 0 && !view.contains(x, y)) {
+        // Pfeil am Bildrand, der zum Ziel zeigt
+        const cx = view.centerX;
+        const cy = view.centerY;
+        const ang = Math.atan2(y - cy, x - cx);
+        // Abstand zum Rand, damit der Pfeil nicht unter Zielliste/Meldungen verschwindet
+        const m = 90 / this.cameras.main.zoom;
+        const hx = view.width / 2 - m;
+        const hy = view.height / 2 - m;
+        const k = Math.min(hx / Math.abs(Math.cos(ang) || 1e-6), hy / Math.abs(Math.sin(ang) || 1e-6));
+        const ax = cx + Math.cos(ang) * k;
+        const ay = cy + Math.sin(ang) * k;
+        const s = (18 + pulse * 4) / this.cameras.main.zoom;
+        const pt = (d: number, side: number) => [ax + Math.cos(ang) * d - Math.sin(ang) * side, ay + Math.sin(ang) * d + Math.cos(ang) * side] as const;
+        const [x1, y1] = pt(s, 0);
+        const [x2, y2] = pt(-s * 0.6, s * 0.7);
+        const [x3, y3] = pt(-s * 0.6, -s * 0.7);
+        g.fillStyle(0xffcf4a, 1);
+        g.fillTriangle(x1, y1, x2, y2, x3, y3);
+        g.lineStyle(3, 0x1d1a2b, 1);
+        g.strokeTriangle(x1, y1, x2, y2, x3, y3);
+      }
+    }
+  }
+
+  /** Zielmarkierungen auf der Minikarte (auch ohne Radar). */
+  private drawMinimapObjectives(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
+    const on = Math.floor(this.time.now / 400) % 2 === 0;
+    for (const a of this.markedObjectives()) {
+      ctx.strokeStyle = on ? '#ffcf4a' : '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(a[0] * sx, a[1] * sy, Math.max(4, a[2] * sx), Math.max(4, a[3] * sy));
+    }
   }
 }
 

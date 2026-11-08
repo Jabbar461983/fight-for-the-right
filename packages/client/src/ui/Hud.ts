@@ -71,12 +71,16 @@ export interface HudActions {
   sendPing(kind: 'help' | 'attack'): void;
   /** Kampagne: zum Briefing der nächsten Mission. */
   nextMission(): void;
+  /** Kamera auf ein Zielgebiet (Kacheln: x, y, Breite, Höhe). */
+  focusArea(area: [number, number, number, number]): void;
 }
 
 /** Ein Missionsziel für die Anzeige. */
 export interface ObjectiveView {
   key: string;
   status: 'open' | 'done' | 'failed';
+  /** Zielgebiet (Kacheln) – dann gibt es einen 📍-Knopf, der die Kamera hinbringt. */
+  area?: [number, number, number, number];
 }
 
 const ICONS = {
@@ -730,11 +734,24 @@ export class Hud {
       ${this.countdownText ? `<div class="countdown">⏱ ${this.countdownText}</div>` : ''}
       ${
         this.objectivesOpen
-          ? `<ul>${this.objectives.map((o) => `<li class="${o.status}"><i>${icon[o.status]}</i><span></span></li>`).join('')}</ul>`
+          ? `<ul>${this.objectives
+              .map(
+                (o, i) =>
+                  `<li class="${o.status}"><i>${icon[o.status]}</i><span></span>${
+                    o.area && o.status === 'open' ? `<button type="button" class="obj-goto" data-obj="${i}" title="${t('mission.showOnMap')}" aria-label="${t('mission.showOnMap')}">📍</button>` : ''
+                  }</li>`,
+              )
+              .join('')}</ul>`
           : ''
       }`;
     el.querySelectorAll('li span').forEach((s, i) => (s.textContent = t(this.objectives[i].key)));
     el.querySelector('.obj-toggle')!.addEventListener('click', () => this.toggleObjectives());
+    el.querySelectorAll<HTMLButtonElement>('.obj-goto').forEach((b) =>
+      b.addEventListener('click', () => {
+        const area = this.objectives[Number(b.dataset.obj)]?.area;
+        if (area) this.actions.focusArea(area);
+      }),
+    );
   }
 
   // ───────────── Pause & Ende ─────────────
