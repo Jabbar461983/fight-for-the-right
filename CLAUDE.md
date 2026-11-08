@@ -171,8 +171,10 @@ npm run maps         # Startkarten neu erzeugen
   begrenzte Flussfelder, Minikarten-Nebel als Bild; gemessen 200 Einheiten: Simulation ≈ 1 ms/Tick, Bild ≈ 2,5 ms
   am PC), Ton und Musik, Bau-Animation/Rauch/Staub/Mündungsfeuer, Tutorial-Hinweise, Spielanleitung,
   Einstellungen (Lautstärke, weniger Effekte), Balancing (Duell-Tabelle: Schützen > Raketen > Panzer > Schützen;
-  KI: zweite Raffinerie, Mindestarmee, Wellen drücken weiter). KI-Serie 8.11.2026: Schwer gegen Leicht 5 Siege,
-  3 Unentschieden, 0 Niederlagen; Mittel Aero gegen Mittel Granit 2:2. Auf echtem Tablet noch nicht gemessen.
+  KI: zweite Raffinerie, Mindestarmee, Wellen drücken weiter). KI-Serie 8.11.2026 (nach Sammler-Fix, 3 Karten):
+  Schwer gegen Leicht 7 Siege, 5 Unentschieden, 0 Niederlagen; Mittel Aero gegen Mittel Granit 2:3 (1 unentschieden).
+  Sammler: jeder steuert eine eigene Kachel an (`claimed`), volle Kacheln zuerst, nur über Land erreichbare.
+  Bauleiste/Auswahl zeigen «stark gegen» (`strongAgainst()` in rules.ts, ab 80 % Schaden). Meldungen mit Fraktions-Wappen. Auf echtem Tablet noch nicht gemessen.
 - **Etappe 5 – Kampagne:** abgenommen (7.11.2026). A1 «Landung auf Neu-Aurora» (Tutorial auf Kristalltal),
   A2 «Rettung im Nebel» (Kommando, eigene Karte Nebelwald), G1 «Die Mauer hält» (15 Min. verteidigen auf
   Vier Winde), G2 «Gegenschlag» (Archipel gegen KI-Basis). Figuren: Kommandantin Lyra Funke (Aero),
