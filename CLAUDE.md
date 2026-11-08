@@ -167,7 +167,7 @@ npm run maps         # Startkarten neu erzeugen
   Türme, Flächenschaden), Nebel mit Geistern, gemeinsame Bodeneinheiten beider Fraktionen (Aero billiger und
   schneller, Granit zäher), Ingenieur, Bauwagen, KI Leicht, Sieg/Niederlage/Aufgeben, Hauptmenü,
   Endstatistik. Getestet: komplette Partie gegen KI im Browser gewonnen; KI besiegt untätigen Gegner (Test).
-- **Etappe 6 – Feinschliff:** fertig, wartet auf Abnahme. Leistung (Tempo-Raster für Komponenten/Flussfelder,
+- **Etappe 6 – Feinschliff:** abgenommen (8.11.2026). Damit sind alle Etappen der ersten Version fertig. Leistung (Tempo-Raster für Komponenten/Flussfelder,
   begrenzte Flussfelder, Minikarten-Nebel als Bild; gemessen 200 Einheiten: Simulation ≈ 1 ms/Tick, Bild ≈ 2,5 ms
   am PC), Ton und Musik, Bau-Animation/Rauch/Staub/Mündungsfeuer, Tutorial-Hinweise, Spielanleitung,
   Einstellungen (Lautstärke, weniger Effekte), Balancing (Duell-Tabelle: Schützen > Raketen > Panzer > Schützen;
