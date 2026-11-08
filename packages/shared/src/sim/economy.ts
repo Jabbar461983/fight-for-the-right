@@ -15,6 +15,8 @@ const REGROW_INTERVAL = 60;
 const REGROW_DIV = 40;
 /** Bis zu dieser Entfernung (Kacheln) sucht ein Sammler das nächste Feld in der Nähe. */
 const NEARBY_FIELD = 6;
+/** Kacheln mit weniger Glimmerit gelten als «fast leer» (lohnen weniger als eine volle). */
+const LOW_TILE = 150;
 
 /**
  * Glimmerit-Wirtschaft: Kristallfelder auf der Karte und das Verhalten der Sammler.
@@ -77,8 +79,12 @@ export class Economy {
     }
   }
 
-  /** Nächste Kachel mit Glimmerit (optional nur im Umkreis). -1 wenn keine. */
-  findCrystal(x: number, y: number, maxTiles = Infinity): number {
+  /**
+   * Nächste Kachel mit Glimmerit (optional nur im Umkreis). -1 wenn keine.
+   * `claimed`: Kacheln, die andere Sammler schon ansteuern – werden gemieden (sonst drängeln
+   * sich alle auf einer Kachel). Fast leere Kacheln zählen etwas weiter weg, damit volle drankommen.
+   */
+  findCrystal(x: number, y: number, maxTiles = Infinity, claimed?: Set<number>): number {
     const m = this.sim.map;
     const cx = tileOf(x);
     const cy = tileOf(y);
@@ -89,7 +95,9 @@ export class Economy {
       for (let tx = Math.max(0, cx - r); tx <= Math.min(m.width - 1, cx + r); tx++) {
         const i = ty * m.width + tx;
         if (this.crystal[i] <= 0 || m.blocked[i] !== 0) continue;
-        const d = (tx - cx) * (tx - cx) + (ty - cy) * (ty - cy);
+        let d = (tx - cx) * (tx - cx) + (ty - cy) * (ty - cy);
+        if (claimed?.has(i)) d += 400;
+        if (this.crystal[i] < LOW_TILE) d += 6;
         if (d < bestD) {
           bestD = d;
           best = i;
@@ -126,6 +134,15 @@ export class Economy {
       const tx = idx % m.width;
       return { x: tileCenter(tx), y: tileCenter((idx - tx) / m.width) };
     };
+    /** Kacheln, die andere eigene Sammler gerade ansteuern oder abernten. */
+    const claimed = () => {
+      const s = new Set<number>();
+      for (const o of sim.units) {
+        if (o === u || o.dead || o.owner !== u.owner || o.task?.kind !== 'harvest') continue;
+        if ((o.task.phase === 'toField' || o.task.phase === 'harvesting') && o.task.fieldIdx >= 0) s.add(o.task.fieldIdx);
+      }
+      return s;
+    };
 
     switch (t.phase) {
       case 'seek': {
@@ -137,7 +154,7 @@ export class Economy {
           t.timer--;
           return;
         }
-        const idx = this.findCrystal(u.x, u.y);
+        const idx = this.findCrystal(u.x, u.y, Infinity, claimed());
         if (idx < 0) {
           t.timer = 30; // nichts gefunden – später wieder schauen
           if (u.cargo > 0) t.phase = 'toRefinery';
@@ -153,7 +170,7 @@ export class Economy {
         if (t.fieldIdx < 0 || this.crystal[t.fieldIdx] <= 0) {
           // Feld leer: in der Nähe weitersuchen
           const from = t.fieldIdx >= 0 ? center(t.fieldIdx) : u;
-          const near = this.findCrystal(from.x, from.y, NEARBY_FIELD);
+          const near = this.findCrystal(from.x, from.y, NEARBY_FIELD, claimed());
           if (near < 0) {
             t.phase = 'seek';
             return;
@@ -248,6 +265,8 @@ export class Economy {
         p.stats.harvested += amount;
         if (u.cargo <= 0) {
           r.dockedBy = 0;
+          // Alte Kachel inzwischen von einem anderen Sammler belegt → eine neue suchen
+          if (t.fieldIdx >= 0 && claimed().has(t.fieldIdx)) t.fieldIdx = -1;
           t.phase = t.fieldIdx >= 0 ? 'toField' : 'seek';
         }
         return;
