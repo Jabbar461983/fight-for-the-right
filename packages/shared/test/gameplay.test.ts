@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadRules, strongAgainst } from '../src/data/rules';
+import { effectiveness, loadRules, strongAgainst } from '../src/data/rules';
 import { damageFor } from '../src/sim/combat';
 import { GameMap } from '../src/map/gameMap';
 import { TILE, tileCenter } from '../src/math/fixed';
@@ -50,6 +50,16 @@ describe('Regeln', () => {
         expect(list.length, u.id).toBeLessThan(5);
       }
     }
+  });
+
+  it('Sterne-Bewertung 0–5 je Ziel', () => {
+    const e = (id: string) => effectiveness(rules.unit('aero', id)!);
+    expect(e('rifleman')).toEqual({ infantry: 5, light: 1, heavy: 1, building: 1, air: 0 });
+    expect(e('rocketeer').light).toBe(5);
+    expect(e('rocketeer').infantry).toBe(2);
+    expect(e('flakWagon').air).toBe(5);
+    expect(e('lightTank').air).toBe(0); // schiesst nicht nach oben
+    expect(e('engineer')).toEqual({ infantry: 0, light: 0, heavy: 0, building: 0, air: 0 });
   });
 
   it('meldet Fehler in Datendateien verständlich', () => {

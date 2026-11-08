@@ -221,12 +221,25 @@ export const STRONG_VERSUS = 80;
  * (für die Anzeige in der Bauleiste). Leer, wenn unbewaffnet.
  */
 export function strongAgainst(def: { weapon: WeaponDef | null }): ArmorClass[] {
+  const r = effectiveness(def);
+  return ARMOR_CLASSES.filter((c) => r[c] >= 4);
+}
+
+/**
+ * Wie wirksam eine Einheit/ein Turm gegen jede Panzerungsklasse ist: 0–5 Sterne
+ * (0 = trifft gar nicht). Aus dem Schadens-Prozentsatz der Waffe:
+ * ab 100 % ★★★★★, ab 80 % ★★★★, ab 50 % ★★★, ab 25 % ★★, darunter ★.
+ */
+export function effectiveness(def: { weapon: WeaponDef | null }): Record<ArmorClass, number> {
+  const out = { infantry: 0, light: 0, heavy: 0, building: 0, air: 0 } as Record<ArmorClass, number>;
   const w = def.weapon;
-  if (!w) return [];
-  return ARMOR_CLASSES.filter((c) => {
-    if (c === 'air' ? w.targets === 'ground' : w.targets === 'air') return false;
-    return w.versus[c] >= STRONG_VERSUS;
-  });
+  if (!w) return out;
+  for (const c of ARMOR_CLASSES) {
+    if (c === 'air' ? w.targets === 'ground' : w.targets === 'air') continue;
+    const v = w.versus[c];
+    out[c] = v <= 0 ? 0 : v >= 100 ? 5 : v >= STRONG_VERSUS ? 4 : v >= 50 ? 3 : v >= 25 ? 2 : 1;
+  }
+  return out;
 }
 
 /** Alle Regeln, fertig für die Simulation. */
