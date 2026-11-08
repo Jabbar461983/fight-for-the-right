@@ -38,7 +38,7 @@
         { "type": "credits", "owner": 2, "amount": { "easy": 2000, "medium": 4000, "hard": 7000 } },
         { "type": "ai", "owner": 2 },
         { "type": "message", "key": "mission.g2.m.start" },
-        { "type": "objective", "id": "destroy", "key": "mission.g2.o.destroy" }
+        { "type": "objective", "id": "destroy", "key": "mission.g2.o.destroy", "area": "enemy" }
       ]
     },
     {

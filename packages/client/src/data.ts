@@ -4,6 +4,18 @@ import missionA1 from '@data/missions/a1.json';
 import missionA2 from '@data/missions/a2.json';
 import missionG1 from '@data/missions/g1.json';
 import missionG2 from '@data/missions/g2.json';
+import missionA3 from '@data/missions/a3.json';
+import missionA4 from '@data/missions/a4.json';
+import missionA5 from '@data/missions/a5.json';
+import missionA6 from '@data/missions/a6.json';
+import missionA7 from '@data/missions/a7.json';
+import missionA8 from '@data/missions/a8.json';
+import missionG3 from '@data/missions/g3.json';
+import missionG4 from '@data/missions/g4.json';
+import missionG5 from '@data/missions/g5.json';
+import missionG6 from '@data/missions/g6.json';
+import missionG7 from '@data/missions/g7.json';
+import missionG8 from '@data/missions/g8.json';
 import weapons from '@data/rules/weapons.json';
 import buildings from '@data/rules/buildings.json';
 import factions from '@data/rules/factions.json';
@@ -62,7 +74,10 @@ let missionsCache: MissionDef[] | null = null;
 
 /** Alle Kampagnen-Missionen (geprüft), sortiert nach Fraktion und Reihenfolge. Neue Mission: JSON in data/missions + hier eintragen. */
 export function getMissions(): MissionDef[] {
-  missionsCache ??= [missionA1, missionA2, missionG1, missionG2]
+  missionsCache ??= [
+    missionA1, missionA2, missionA3, missionA4, missionA5, missionA6, missionA7, missionA8,
+    missionG1, missionG2, missionG3, missionG4, missionG5, missionG6, missionG7, missionG8,
+  ]
     .map((json) => loadMission(json, getRules()))
     .sort((a, b) => a.faction.localeCompare(b.faction) || a.order - b.order);
   return missionsCache;

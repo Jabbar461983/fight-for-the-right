@@ -1,0 +1,72 @@
+{
+  "id": "g8",
+  "faction": "granite",
+  "order": 8,
+  "map": "vier-winde",
+  "titleKey": "mission.g8.title",
+  "briefingKey": "mission.g8.briefing",
+  "briefingGoals": ["mission.g8.goal.hold", "mission.g8.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" },
+    { "id": 3, "faction": "aero", "color": 2, "team": 2, "nameKey": "mission.player.aero2" },
+    { "id": 4, "faction": "aero", "color": 4, "team": 2, "nameKey": "mission.player.aero3" }
+  ],
+  "credits": { "easy": 8000, "medium": 6500, "hard": 5500 },
+  "areas": {
+    "home": [6, 6, 14, 14],
+    "northEast": [60, 5, 15, 15],
+    "southEast": [60, 60, 15, 15],
+    "southWest": [5, 60, 15, 15]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [12, 12], "buildings": ["constructionYard", "powerPlant", "powerPlant", "powerPlant", "refinery", "refinery", "barracks", "factory", "radar", "silo"] },
+        { "type": "building", "owner": 1, "building": "cannonTower", "at": [22, 17] },
+        { "type": "building", "owner": 1, "building": "cannonTower", "at": [17, 22] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 1, "at": "home" },
+        { "type": "base", "owner": 2, "at": [67, 12], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "mgTower", "cannonTower"], "tag": "ne" },
+        { "type": "base", "owner": 3, "at": [67, 67], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "techCenter", "airfield", "cannonTower", "flakPosition"], "tag": "se" },
+        { "type": "base", "owner": 4, "at": [12, 67], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "mgTower", "cannonTower"], "tag": "sw" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 1500, "medium": 3000, "hard": 4500 } },
+        { "type": "credits", "owner": 3, "amount": { "easy": 2500, "medium": 4000, "hard": 6000 } },
+        { "type": "credits", "owner": 4, "amount": { "easy": 1500, "medium": 3000, "hard": 4500 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "easy", "medium": "medium", "hard": "hard" } },
+        { "type": "ai", "owner": 3, "levels": { "easy": "medium", "medium": "medium", "hard": "hard" } },
+        { "type": "ai", "owner": 4, "levels": { "easy": "easy", "medium": "medium", "hard": "medium" } },
+        { "type": "message", "key": "mission.g8.m.start" },
+        { "type": "objective", "id": "ne", "key": "mission.g8.o.ne", "area": "northEast" },
+        { "type": "objective", "id": "se", "key": "mission.g8.o.se", "area": "southEast" },
+        { "type": "objective", "id": "sw", "key": "mission.g8.o.sw", "area": "southWest" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 40 }],
+      "do": [{ "type": "message", "key": "mission.g8.m.tip" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "ne" }, { "type": "message", "key": "mission.g8.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 3 }],
+      "do": [{ "type": "complete", "id": "se" }, { "type": "message", "key": "mission.g8.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 4 }],
+      "do": [{ "type": "complete", "id": "sw" }, { "type": "message", "key": "mission.g8.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "objectivesDone", "ids": ["ne", "se", "sw"] }],
+      "do": [{ "type": "message", "key": "mission.g8.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "id": "g3",
+  "faction": "granite",
+  "order": 3,
+  "map": "kristalltal",
+  "titleKey": "mission.g3.title",
+  "briefingKey": "mission.g3.briefing",
+  "briefingGoals": ["mission.g3.goal.sneak", "mission.g3.goal.power", "mission.g3.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" }
+  ],
+  "credits": { "easy": 3500, "medium": 3000, "hard": 2500 },
+  "locked": ["airfield", "shipyard"],
+  "areas": {
+    "home": [5, 48, 12, 12],
+    "outpost": [45, 2, 16, 16],
+    "gate": [44, 15, 8, 6]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "spawn", "owner": 1, "unit": "mole", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "engineer", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": { "easy": 6, "medium": 5, "hard": 4 }, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "mortarTeam", "count": 2, "at": "home" },
+        { "type": "building", "owner": 2, "building": "powerPlant", "at": [55, 6], "tag": "power" },
+        { "type": "base", "owner": 2, "at": [53, 9], "buildings": ["barracks", "radar", "mgTower", "mgTower", "cannonTower"], "tag": "outpost" },
+        { "type": "base", "owner": 2, "at": [53, 9], "buildings": ["cannonTower", "flakPosition"], "tag": "outpost", "difficulty": ["medium", "hard"] },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 3, "medium": 4, "hard": 6 }, "at": "outpost" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "gate", "stance": "hold" },
+        { "type": "message", "key": "mission.g3.m.start" },
+        { "type": "objective", "id": "power", "key": "mission.g3.o.power", "area": "outpost" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 25 }],
+      "do": [{ "type": "message", "key": "mission.g3.m.tip" }]
+    },
+    {
+      "when": [{ "type": "owned", "tag": "power", "owner": 1 }],
+      "do": [
+        { "type": "complete", "id": "power" },
+        { "type": "message", "key": "mission.g3.m.power" },
+        { "type": "spawn", "owner": 1, "unit": "constructionWagon", "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 3, "at": "home" },
+        { "type": "objective", "id": "destroy", "key": "mission.g3.o.destroy", "area": "outpost" }
+      ]
+    },
+    {
+      "when": [{ "type": "destroyed", "tag": "power" }],
+      "do": [
+        { "type": "message", "key": "mission.g3.m.powerLost" },
+        { "type": "spawn", "owner": 1, "unit": "constructionWagon", "at": "home" },
+        { "type": "objective", "id": "destroy", "key": "mission.g3.o.destroy", "area": "outpost" }
+      ]
+    },
+    {
+      "difficulty": ["medium", "hard"],
+      "when": [{ "type": "every", "seconds": { "easy": 999, "medium": 150, "hard": 110 }, "from": 240 }],
+      "do": [{ "type": "spawn", "owner": 2, "unit": "jetpackRanger", "count": { "easy": 0, "medium": 2, "hard": 3 }, "growth": 1, "max": 6, "at": "gate", "attackTo": "home" }]
+    },
+    {
+      "when": [{ "type": "destroyed", "tag": "outpost" }],
+      "do": [{ "type": "complete", "id": "power" }, { "type": "complete", "id": "destroy" }, { "type": "message", "key": "mission.g3.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "army", "owner": 1, "atMost": 0 }, { "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.squad" }]
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import { availability, placeBuilding } from '../src/sim/production';
 import type { Simulation } from '../src/sim/simulation';
 import { loadData, loadMap, rules, run } from './helpers';
 
-const MISSIONS = ['a1', 'a2', 'g1', 'g2'];
+const MISSIONS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'];
 
 function mission(id: string): MissionDef {
   return loadMission(loadData(`missions/${id}.json`), rules);
@@ -72,10 +72,10 @@ describe('Missionen', () => {
     expect(a.stateHash()).toBe(b.stateHash());
   });
 
-  it('Kampagnen-Reihenfolge: je Fraktion 1, 2', () => {
+  it('Kampagnen-Reihenfolge: je Kampagne 8 Missionen (1–8)', () => {
     const defs = MISSIONS.map(mission);
     for (const f of ['aero', 'granite'] as const) {
-      expect(defs.filter((d) => d.faction === f).map((d) => d.order).sort()).toEqual([1, 2]);
+      expect(defs.filter((d) => d.faction === f).map((d) => d.order).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     }
   });
 

@@ -1,0 +1,67 @@
+{
+  "id": "a7",
+  "faction": "aero",
+  "order": 7,
+  "map": "vier-winde",
+  "titleKey": "mission.a7.title",
+  "briefingKey": "mission.a7.briefing",
+  "briefingGoals": ["mission.a7.goal.ally", "mission.a7.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
+    { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" },
+    { "id": 3, "faction": "granite", "color": 5, "team": 2, "nameKey": "mission.player.granite2" },
+    { "id": 4, "faction": "aero", "color": 2, "team": 1, "nameKey": "mission.player.ally" }
+  ],
+  "credits": { "easy": 6000, "medium": 5000, "hard": 4500 },
+  "areas": {
+    "home": [6, 6, 14, 14],
+    "allyBase": [61, 6, 14, 14],
+    "southWest": [6, 61, 14, 14],
+    "southEast": [61, 61, 14, 14]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [12, 12], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory"] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 3, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 3, "at": "home" },
+        { "type": "base", "owner": 4, "at": [67, 12], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "mgTower"] },
+        { "type": "spawn", "owner": 4, "unit": "lightTank", "count": 3, "at": "allyBase" },
+        { "type": "credits", "owner": 4, "amount": 3000 },
+        { "type": "ai", "owner": 4, "level": "medium" },
+        { "type": "base", "owner": 2, "at": [12, 67], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "mgTower", "cannonTower"], "tag": "baseSW" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 2, "medium": 3, "hard": 4 }, "at": "southWest" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 2000, "medium": 3000, "hard": 5000 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "easy", "medium": "medium", "hard": "hard" } },
+        { "type": "base", "owner": 3, "at": [67, 67], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "mgTower", "cannonTower"], "tag": "baseSE" },
+        { "type": "spawn", "owner": 3, "unit": "lightTank", "count": { "easy": 2, "medium": 3, "hard": 4 }, "at": "southEast" },
+        { "type": "credits", "owner": 3, "amount": { "easy": 2000, "medium": 3000, "hard": 5000 } },
+        { "type": "ai", "owner": 3, "levels": { "easy": "medium", "medium": "medium", "hard": "medium" } },
+        { "type": "message", "key": "mission.a7.m.start" },
+        { "type": "objective", "id": "sw", "key": "mission.a7.o.sw", "area": "southWest" },
+        { "type": "objective", "id": "se", "key": "mission.a7.o.se", "area": "southEast" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 45 }],
+      "do": [{ "type": "message", "key": "mission.a7.m.tip" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "sw" }, { "type": "message", "key": "mission.a7.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 3 }],
+      "do": [{ "type": "complete", "id": "se" }, { "type": "message", "key": "mission.a7.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "objectivesDone", "ids": ["sw", "se"] }],
+      "do": [{ "type": "message", "key": "mission.a7.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

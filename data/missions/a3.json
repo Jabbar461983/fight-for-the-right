@@ -1,0 +1,62 @@
+{
+  "id": "a3",
+  "faction": "aero",
+  "order": 3,
+  "map": "zwei-ufer",
+  "titleKey": "mission.a3.title",
+  "briefingKey": "mission.a3.briefing",
+  "briefingGoals": ["mission.a3.goal.base", "mission.a3.goal.bridge", "mission.a3.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
+    { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" }
+  ],
+  "credits": { "easy": 5000, "medium": 4000, "hard": 3500 },
+  "locked": ["techCenter", "rocketBattery"],
+  "areas": {
+    "home": [4, 39, 14, 14],
+    "bridge": [30, 23, 12, 9],
+    "enemy": [54, 3, 15, 15]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "spawn", "owner": 1, "unit": "constructionWagon", "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 2, "at": "home" },
+        { "type": "base", "owner": 2, "at": [61, 10], "buildings": ["constructionYard", "powerPlant", "refinery", "barracks", "factory", "mgTower"], "tag": "enemyBase" },
+        { "type": "building", "owner": 2, "building": "cannonTower", "at": [52, 13], "difficulty": ["medium", "hard"] },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 3, "medium": 4, "hard": 6 }, "at": "bridge", "stance": "hold" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 1, "medium": 2, "hard": 2 }, "at": "bridge", "stance": "hold" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 1000, "medium": 2000, "hard": 3000 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "easy", "medium": "easy", "hard": "medium" } },
+        { "type": "message", "key": "mission.a3.m.start" },
+        { "type": "objective", "id": "bridge", "key": "mission.a3.o.bridge", "area": "bridge" }
+      ]
+    },
+    {
+      "when": [{ "type": "enterArea", "area": "bridge", "owner": 1, "count": 3 }, { "type": "time", "seconds": 5 }],
+      "do": [
+        { "type": "complete", "id": "bridge" },
+        { "type": "message", "key": "mission.a3.m.bridge" },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "skyBike", "count": 2, "at": "home" },
+        { "type": "reveal", "area": "enemy" },
+        { "type": "objective", "id": "destroy", "key": "mission.a3.o.destroy", "area": "enemy" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 60 }],
+      "do": [{ "type": "message", "key": "mission.a3.m.tip" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "bridge" }, { "type": "complete", "id": "destroy" }, { "type": "message", "key": "mission.a3.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

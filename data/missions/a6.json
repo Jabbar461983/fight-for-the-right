@@ -1,0 +1,54 @@
+{
+  "id": "a6",
+  "faction": "aero",
+  "order": 6,
+  "map": "vier-winde",
+  "titleKey": "mission.a6.title",
+  "briefingKey": "mission.a6.briefing",
+  "briefingGoals": ["mission.a6.goal.economy", "mission.a6.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
+    { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" }
+  ],
+  "credits": { "easy": 6000, "medium": 5000, "hard": 4000 },
+  "areas": {
+    "home": [6, 6, 14, 14],
+    "enemy": [60, 60, 15, 15],
+    "center": [33, 33, 14, 14]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [12, 12], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory"] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 3, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 2, "at": "home" },
+        { "type": "base", "owner": 2, "at": [67, 67], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "mgTower", "cannonTower", "cannonTower"], "tag": "forge" },
+        { "type": "base", "owner": 2, "at": [67, 67], "buildings": ["techCenter", "bunker", "flakPosition"], "difficulty": ["medium", "hard"] },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 2, "medium": 4, "hard": 5 }, "at": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": 4, "at": "enemy" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 2000, "medium": 4000, "hard": 6000 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "medium", "medium": "medium", "hard": "hard" } },
+        { "type": "message", "key": "mission.a6.m.start" },
+        { "type": "objective", "id": "destroy", "key": "mission.a6.o.destroy", "area": "enemy" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 40 }],
+      "do": [{ "type": "message", "key": "mission.a6.m.tip" }]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 420 }],
+      "do": [{ "type": "message", "key": "mission.a6.m.center" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "destroy" }, { "type": "message", "key": "mission.a6.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

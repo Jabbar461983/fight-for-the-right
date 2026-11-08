@@ -40,13 +40,21 @@
         { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 0, "medium": 1, "hard": 2 }, "at": "bridgeNorth", "stance": "hold" },
         { "type": "spawn", "owner": 2, "unit": "lightTank", "count": 1, "at": "clearing", "difficulty": ["hard"] },
         { "type": "message", "key": "mission.a2.m.start" },
-        { "type": "objective", "id": "rescue", "key": "mission.a2.o.rescue" },
+        { "type": "objective", "id": "rescue", "key": "mission.a2.o.rescue", "area": "prison" },
         { "type": "objective", "id": "survive", "key": "mission.a2.o.survive" }
       ]
     },
     {
       "when": [{ "type": "time", "seconds": 20 }],
       "do": [{ "type": "message", "key": "mission.a2.m.forest" }]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 150 }],
+      "do": [{ "type": "message", "key": "mission.a2.m.campHint" }]
+    },
+    {
+      "when": [{ "type": "flag", "name": "freed" }, { "type": "every", "seconds": 75, "from": 60 }],
+      "do": [{ "type": "message", "key": "mission.a2.m.pickupHint", "speaker": "researcher" }]
     },
     {
       "when": [{ "type": "enterArea", "area": "prison", "owner": 1 }],
@@ -56,7 +64,7 @@
         { "type": "message", "key": "mission.a2.m.freed", "speaker": "researcher" },
         { "type": "message", "key": "mission.a2.m.toPickup" },
         { "type": "reveal", "area": "pickup" },
-        { "type": "objective", "id": "escort", "key": "mission.a2.o.escort" },
+        { "type": "objective", "id": "escort", "key": "mission.a2.o.escort", "area": "pickup" },
         { "type": "flag", "name": "freed" }
       ]
     },

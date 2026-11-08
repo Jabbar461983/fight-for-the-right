@@ -1,0 +1,56 @@
+{
+  "id": "g6",
+  "faction": "granite",
+  "order": 6,
+  "map": "vier-winde",
+  "titleKey": "mission.g6.title",
+  "briefingKey": "mission.g6.briefing",
+  "briefingGoals": ["mission.g6.goal.source", "mission.g6.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" }
+  ],
+  "credits": { "easy": 6000, "medium": 5000, "hard": 4000 },
+  "areas": {
+    "home": [6, 6, 14, 14],
+    "enemy": [60, 60, 15, 15],
+    "center": [33, 33, 14, 14]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [12, 12], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory"] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 3, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "engineer", "count": 1, "at": "home" },
+        { "type": "building", "owner": 0, "building": "glimmerSource", "at": [40, 26], "tag": "source" },
+        { "type": "base", "owner": 2, "at": [67, 67], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "mgTower", "cannonTower", "flakPosition"], "tag": "base" },
+        { "type": "base", "owner": 2, "at": [67, 67], "buildings": ["techCenter", "rocketBattery", "cannonTower"], "difficulty": ["medium", "hard"] },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 3, "medium": 4, "hard": 5 }, "at": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "hoverTank", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "enemy" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 2500, "medium": 4500, "hard": 6500 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "medium", "medium": "medium", "hard": "hard" } },
+        { "type": "message", "key": "mission.g6.m.start" },
+        { "type": "objective", "id": "source", "key": "mission.g6.o.source", "area": "center" },
+        { "type": "objective", "id": "destroy", "key": "mission.g6.o.destroy", "area": "enemy" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 40 }],
+      "do": [{ "type": "message", "key": "mission.g6.m.tip" }]
+    },
+    {
+      "when": [{ "type": "owned", "tag": "source", "owner": 1 }],
+      "do": [{ "type": "complete", "id": "source" }, { "type": "message", "key": "mission.g6.m.source" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "destroy" }, { "type": "message", "key": "mission.g6.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "id": "a4",
+  "faction": "aero",
+  "order": 4,
+  "map": "kristalltal",
+  "titleKey": "mission.a4.title",
+  "briefingKey": "mission.a4.briefing",
+  "briefingGoals": ["mission.a4.goal.escort", "mission.a4.goal.depot", "mission.a4.goal.keep"],
+  "players": [
+    { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
+    { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" }
+  ],
+  "credits": 0,
+  "locked": ["*"],
+  "areas": {
+    "home": [5, 48, 12, 12],
+    "convoyStart": [12, 54, 6, 5],
+    "depot": [46, 3, 14, 14],
+    "ambushWest": [12, 34, 6, 6],
+    "ambushMid": [27, 22, 8, 6],
+    "ambushEast": [36, 30, 6, 6],
+    "ambushGate": [40, 14, 6, 6],
+    "enemyEdge": [58, 26, 5, 5],
+    "middle": [24, 24, 16, 16]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "spawn", "owner": 1, "unit": "harvester", "count": 4, "at": "convoyStart", "tag": "convoy", "moveTo": "convoyStart" },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": { "easy": 5, "medium": 4, "hard": 3 }, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 3, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 1, "at": "home" },
+        { "type": "building", "owner": 1, "building": "refinery", "at": [53, 9], "tag": "depotBuilding" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 3, "medium": 4, "hard": 5 }, "at": "ambushWest", "stance": "hold" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "ambushMid", "stance": "hold" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 1, "medium": 2, "hard": 2 }, "at": "ambushMid", "stance": "hold" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 3, "hard": 4 }, "at": "ambushEast", "stance": "hold" },
+        { "type": "building", "owner": 2, "building": "mgTower", "at": [43, 17], "difficulty": ["medium", "hard"] },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "ambushGate", "stance": "hold" },
+        { "type": "message", "key": "mission.a4.m.start" },
+        { "type": "objective", "id": "depot", "key": "mission.a4.o.depot", "area": "depot" },
+        { "type": "objective", "id": "keep", "key": "mission.a4.o.keep" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 25 }],
+      "do": [{ "type": "message", "key": "mission.a4.m.tip" }]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 180 }],
+      "do": [
+        { "type": "message", "key": "mission.a4.m.reinforce" },
+        { "type": "spawn", "owner": 1, "unit": "skyBike", "count": { "easy": 3, "medium": 2, "hard": 2 }, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 2, "at": "home" }
+      ]
+    },
+    {
+      "when": [{ "type": "every", "seconds": { "easy": 150, "medium": 110, "hard": 80 }, "from": 120, "until": 900 }],
+      "do": [
+        { "type": "message", "key": "mission.a4.m.raid", "speaker": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 3, "hard": 4 }, "growth": 1, "max": 8, "at": "enemyEdge", "attackTo": "middle" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 0, "medium": 1, "hard": 2 }, "at": "enemyEdge", "attackTo": "middle" }
+      ]
+    },
+    {
+      "difficulty": ["easy", "medium"],
+      "when": [{ "type": "enterArea", "area": "depot", "tag": "convoy", "count": 2 }],
+      "do": [{ "type": "complete", "id": "depot" }, { "type": "complete", "id": "keep" }, { "type": "message", "key": "mission.a4.m.won" }, { "type": "victory" }]
+    },
+    {
+      "difficulty": ["hard"],
+      "when": [{ "type": "enterArea", "area": "depot", "tag": "convoy", "count": 3 }],
+      "do": [{ "type": "complete", "id": "depot" }, { "type": "complete", "id": "keep" }, { "type": "message", "key": "mission.a4.m.won" }, { "type": "victory" }]
+    },
+    {
+      "difficulty": ["easy", "medium"],
+      "when": [{ "type": "alive", "tag": "convoy", "atMost": 1 }],
+      "do": [{ "type": "fail", "id": "keep" }, { "type": "defeat", "key": "mission.lost.convoy" }]
+    },
+    {
+      "difficulty": ["hard"],
+      "when": [{ "type": "alive", "tag": "convoy", "atMost": 2 }],
+      "do": [{ "type": "fail", "id": "keep" }, { "type": "defeat", "key": "mission.lost.convoy" }]
+    }
+  ]
+}

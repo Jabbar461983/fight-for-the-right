@@ -85,7 +85,7 @@
         { "type": "complete", "id": "army" },
         { "type": "reveal", "area": "outpost" },
         { "type": "message", "key": "mission.a1.m.attack" },
-        { "type": "objective", "id": "outpost", "key": "mission.a1.o.outpost" },
+        { "type": "objective", "id": "outpost", "key": "mission.a1.o.outpost", "area": "outpost" },
         { "type": "highlight", "target": "cmd:attack" }
       ]
     },

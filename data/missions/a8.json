@@ -1,0 +1,71 @@
+{
+  "id": "a8",
+  "faction": "aero",
+  "order": 8,
+  "map": "archipel",
+  "titleKey": "mission.a8.title",
+  "briefingKey": "mission.a8.briefing",
+  "briefingGoals": ["mission.a8.goal.build", "mission.a8.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
+    { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" },
+    { "id": 3, "faction": "granite", "color": 5, "team": 2, "nameKey": "mission.player.granite2" },
+    { "id": 4, "faction": "granite", "color": 4, "team": 2, "nameKey": "mission.player.granite3" }
+  ],
+  "credits": { "easy": 9000, "medium": 7000, "hard": 6000 },
+  "areas": {
+    "home": [8, 8, 18, 18],
+    "northEast": [69, 8, 18, 18],
+    "southEast": [69, 69, 18, 18],
+    "southWest": [8, 69, 18, 18],
+    "middle": [39, 39, 18, 18]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [15, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "airfield", "silo"] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "gunship", "count": 2, "at": "home" },
+        { "type": "base", "owner": 2, "at": [80, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "airfield", "shipyard", "flakPosition", "cannonTower"], "tag": "ne" },
+        { "type": "base", "owner": 3, "at": [80, 80], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "airfield", "shipyard", "flakPosition", "cannonTower", "techCenter"], "tag": "se" },
+        { "type": "base", "owner": 4, "at": [15, 80], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "shipyard", "flakPosition", "cannonTower"], "tag": "sw" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 2000, "medium": 3500, "hard": 5000 } },
+        { "type": "credits", "owner": 3, "amount": { "easy": 2000, "medium": 3500, "hard": 5000 } },
+        { "type": "credits", "owner": 4, "amount": { "easy": 1500, "medium": 3000, "hard": 4000 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "easy", "medium": "medium", "hard": "hard" } },
+        { "type": "ai", "owner": 3, "levels": { "easy": "medium", "medium": "medium", "hard": "hard" } },
+        { "type": "ai", "owner": 4, "levels": { "easy": "easy", "medium": "medium", "hard": "medium" } },
+        { "type": "message", "key": "mission.a8.m.start" },
+        { "type": "objective", "id": "ne", "key": "mission.a8.o.ne", "area": "northEast" },
+        { "type": "objective", "id": "se", "key": "mission.a8.o.se", "area": "southEast" },
+        { "type": "objective", "id": "sw", "key": "mission.a8.o.sw", "area": "southWest" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 40 }],
+      "do": [{ "type": "message", "key": "mission.a8.m.tip" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "ne" }, { "type": "message", "key": "mission.a8.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 3 }],
+      "do": [{ "type": "complete", "id": "se" }, { "type": "message", "key": "mission.a8.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 4 }],
+      "do": [{ "type": "complete", "id": "sw" }, { "type": "message", "key": "mission.a8.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "objectivesDone", "ids": ["ne", "se", "sw"] }],
+      "do": [{ "type": "message", "key": "mission.a8.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

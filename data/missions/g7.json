@@ -1,0 +1,70 @@
+{
+  "id": "g7",
+  "faction": "granite",
+  "order": 7,
+  "map": "archipel",
+  "titleKey": "mission.g7.title",
+  "briefingKey": "mission.g7.briefing",
+  "briefingGoals": ["mission.g7.goal.flak", "mission.g7.goal.destroy"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" },
+    { "id": 3, "faction": "aero", "color": 2, "team": 2, "nameKey": "mission.player.aero2" }
+  ],
+  "credits": { "easy": 8000, "medium": 6500, "hard": 5500 },
+  "areas": {
+    "home": [8, 8, 18, 18],
+    "northEast": [69, 8, 18, 18],
+    "southWest": [8, 69, 18, 18]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [15, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "silo"] },
+        { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "hailFlak", "count": 1, "at": "home" },
+        { "type": "base", "owner": 2, "at": [80, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "airfield", "airfield", "flakPosition", "cannonTower"], "tag": "ne" },
+        { "type": "base", "owner": 3, "at": [15, 80], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "airfield", "shipyard", "flakPosition", "cannonTower"], "tag": "sw" },
+        { "type": "spawn", "owner": 2, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "northEast" },
+        { "type": "spawn", "owner": 3, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 2 }, "at": "southWest" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 2500, "medium": 4000, "hard": 6000 } },
+        { "type": "credits", "owner": 3, "amount": { "easy": 2000, "medium": 3500, "hard": 5000 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "medium", "medium": "medium", "hard": "hard" } },
+        { "type": "ai", "owner": 3, "levels": { "easy": "easy", "medium": "medium", "hard": "medium" } },
+        { "type": "message", "key": "mission.g7.m.start" },
+        { "type": "objective", "id": "ne", "key": "mission.g7.o.ne", "area": "northEast" },
+        { "type": "objective", "id": "sw", "key": "mission.g7.o.sw", "area": "southWest" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 30 }],
+      "do": [{ "type": "message", "key": "mission.g7.m.tip" }]
+    },
+    {
+      "when": [{ "type": "every", "seconds": { "easy": 200, "medium": 160, "hard": 120 }, "from": 300 }],
+      "do": [
+        { "type": "message", "key": "mission.g7.m.air", "speaker": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 2 }, "growth": 0.5, "max": 6, "at": "northEast", "attackTo": "home" },
+        { "type": "spawn", "owner": 2, "unit": "cometFighter", "count": { "easy": 0, "medium": 1, "hard": 2 }, "at": "northEast", "attackTo": "home" }
+      ]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "ne" }, { "type": "message", "key": "mission.g7.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 3 }],
+      "do": [{ "type": "complete", "id": "sw" }, { "type": "message", "key": "mission.g7.m.oneDown" }]
+    },
+    {
+      "when": [{ "type": "objectivesDone", "ids": ["ne", "sw"] }],
+      "do": [{ "type": "message", "key": "mission.g7.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

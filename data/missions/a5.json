@@ -1,0 +1,67 @@
+{
+  "id": "a5",
+  "faction": "aero",
+  "order": 5,
+  "map": "archipel",
+  "titleKey": "mission.a5.title",
+  "briefingKey": "mission.a5.briefing",
+  "briefingGoals": ["mission.a5.goal.cross", "mission.a5.goal.capture", "mission.a5.goal.hold"],
+  "players": [
+    { "id": 1, "faction": "aero", "color": 0, "team": 1, "nameKey": "mission.player.aero" },
+    { "id": 2, "faction": "granite", "color": 1, "team": 2, "nameKey": "mission.player.granite" }
+  ],
+  "credits": { "easy": 7000, "medium": 6000, "hard": 5000 },
+  "areas": {
+    "home": [8, 8, 18, 18],
+    "middle": [39, 39, 18, 18],
+    "enemy": [69, 69, 18, 18]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "base", "owner": 1, "at": [15, 15], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "silo"] },
+        { "type": "spawn", "owner": 1, "unit": "engineer", "count": 2, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 1, "at": "home" },
+        { "type": "building", "owner": 0, "building": "glimmerSource", "at": [43, 46], "tag": "sources" },
+        { "type": "building", "owner": 0, "building": "glimmerSource", "at": [52, 50], "tag": "sources" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 3, "hard": 4 }, "at": "middle", "stance": "hold" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 1, "medium": 2, "hard": 2 }, "at": "middle", "stance": "hold" },
+        { "type": "base", "owner": 2, "at": [80, 80], "buildings": ["constructionYard", "powerPlant", "powerPlant", "refinery", "barracks", "factory", "radar", "airfield", "shipyard", "mgTower", "flakPosition"], "tag": "enemyBase" },
+        { "type": "credits", "owner": 2, "amount": { "easy": 1500, "medium": 3000, "hard": 5000 } },
+        { "type": "ai", "owner": 2, "levels": { "easy": "easy", "medium": "medium", "hard": "medium" } },
+        { "type": "message", "key": "mission.a5.m.start" },
+        { "type": "objective", "id": "capture", "key": "mission.a5.o.capture", "area": "middle" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 30 }],
+      "do": [{ "type": "message", "key": "mission.a5.m.tip" }]
+    },
+    {
+      "when": [{ "type": "owned", "tag": "sources", "owner": 1 }],
+      "do": [
+        { "type": "complete", "id": "capture" },
+        { "type": "message", "key": "mission.a5.m.captured" },
+        { "type": "objective", "id": "hold", "key": "mission.a5.o.hold", "area": "middle" },
+        { "type": "countdown", "seconds": { "easy": 180, "medium": 240, "hard": 300 }, "key": "mission.a5.countdown" },
+        { "type": "flag", "name": "holding" },
+        { "type": "spawn", "owner": 2, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "enemy", "attackTo": "middle" }
+      ]
+    },
+    {
+      "when": [{ "type": "flag", "name": "holding" }],
+      "delay": { "easy": 180, "medium": 240, "hard": 300 },
+      "do": [{ "type": "complete", "id": "hold" }, { "type": "message", "key": "mission.a5.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 2 }],
+      "do": [{ "type": "complete", "id": "capture" }, { "type": "message", "key": "mission.a5.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "noBase", "owner": 1 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.base" }]
+    }
+  ]
+}

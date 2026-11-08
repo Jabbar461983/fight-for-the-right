@@ -1,0 +1,86 @@
+{
+  "id": "g4",
+  "faction": "granite",
+  "order": 4,
+  "map": "zwei-ufer",
+  "titleKey": "mission.g4.title",
+  "briefingKey": "mission.g4.briefing",
+  "briefingGoals": ["mission.g4.goal.hold", "mission.g4.goal.hq", "mission.g4.goal.water"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" }
+  ],
+  "credits": { "easy": 5000, "medium": 4000, "hard": 3000 },
+  "areas": {
+    "home": [4, 39, 14, 14],
+    "eastNorth": [58, 2, 8, 6],
+    "eastMid": [52, 24, 8, 8],
+    "eastSouth": [52, 44, 8, 8],
+    "riverNorth": [33, 0, 6, 5],
+    "riverSouth": [34, 51, 5, 5]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "building", "owner": 1, "building": "constructionYard", "at": [10, 45], "tag": "hq" },
+        { "type": "base", "owner": 1, "at": [10, 45], "buildings": ["powerPlant", "powerPlant", "refinery", "barracks", "factory", "silo", "radar"] },
+        { "type": "building", "owner": 1, "building": "cannonTower", "at": [24, 28] },
+        { "type": "building", "owner": 1, "building": "cannonTower", "at": [22, 48] },
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 4, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 3, "at": "home" },
+        { "type": "spawn", "owner": 1, "unit": "mortarTeam", "count": 2, "at": "home" },
+        { "type": "message", "key": "mission.g4.m.start" },
+        { "type": "objective", "id": "hold", "key": "mission.g4.o.hold" },
+        { "type": "objective", "id": "hq", "key": "mission.g4.o.hq" },
+        { "type": "countdown", "seconds": 720, "key": "mission.g4.countdown" }
+      ]
+    },
+    {
+      "when": [{ "type": "every", "seconds": 85, "from": 70, "until": 680 }],
+      "do": [
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 2, "medium": 3, "hard": 3 }, "growth": { "easy": 0.3, "medium": 0.4, "hard": 0.6 }, "at": "eastMid", "attackTo": "home" },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 2, "medium": 3, "hard": 4 }, "growth": 0.4, "at": "eastMid", "attackTo": "home" },
+        { "type": "spawn", "owner": 2, "unit": "hoverTank", "count": { "easy": 0, "medium": 1, "hard": 2 }, "growth": 0.3, "at": "eastSouth", "attackTo": "home" }
+      ]
+    },
+    {
+      "when": [{ "type": "every", "seconds": 120, "from": 150, "until": 680 }],
+      "do": [
+        { "type": "spawn", "owner": 2, "unit": "skyBike", "count": { "easy": 2, "medium": 3, "hard": 4 }, "growth": 0.5, "at": "eastNorth", "attackTo": "home" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "eastNorth", "attackTo": "home" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 300 }],
+      "do": [
+        { "type": "message", "key": "mission.g4.m.boats" },
+        { "type": "spawn", "owner": 2, "unit": "missileBoat", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "riverSouth", "attackTo": "home" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 450 }],
+      "do": [
+        { "type": "message", "key": "mission.g4.m.air" },
+        { "type": "spawn", "owner": 2, "unit": "gunship", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "eastMid", "attackTo": "home" },
+        { "type": "spawn", "owner": 2, "unit": "patrolBoat", "count": { "easy": 1, "medium": 2, "hard": 2 }, "at": "riverNorth", "attackTo": "home" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 600 }],
+      "do": [
+        { "type": "message", "key": "mission.g4.m.final" },
+        { "type": "spawn", "owner": 2, "unit": "lightTank", "count": { "easy": 4, "medium": 6, "hard": 8 }, "at": "eastMid", "attackTo": "home" },
+        { "type": "spawn", "owner": 2, "unit": "cometFighter", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "eastNorth", "attackTo": "home" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 720 }],
+      "do": [{ "type": "complete", "id": "hold" }, { "type": "complete", "id": "hq" }, { "type": "message", "key": "mission.g4.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "destroyed", "tag": "hq" }],
+      "do": [{ "type": "fail", "id": "hq" }, { "type": "defeat", "key": "mission.lost.hq" }]
+    }
+  ]
+}

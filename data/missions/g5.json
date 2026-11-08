@@ -1,0 +1,83 @@
+{
+  "id": "g5",
+  "faction": "granite",
+  "order": 5,
+  "map": "nebelwald",
+  "titleKey": "mission.g5.title",
+  "briefingKey": "mission.g5.briefing",
+  "briefingGoals": ["mission.g5.goal.find", "mission.g5.goal.survive"],
+  "players": [
+    { "id": 1, "faction": "granite", "color": 1, "team": 1, "nameKey": "mission.player.granite" },
+    { "id": 2, "faction": "aero", "color": 0, "team": 2, "nameKey": "mission.player.aero" }
+  ],
+  "credits": 0,
+  "locked": ["*"],
+  "areas": {
+    "landing": [2, 35, 10, 10],
+    "north": [4, 2, 12, 10],
+    "camp": [54, 16, 13, 14],
+    "southEast": [45, 35, 12, 10],
+    "northEast": [62, 2, 7, 6],
+    "middle": [26, 18, 14, 14]
+  },
+  "events": [
+    {
+      "when": [{ "type": "start" }],
+      "do": [
+        { "type": "spawn", "owner": 1, "unit": "lightTank", "count": { "easy": 5, "medium": 4, "hard": 3 }, "at": "landing" },
+        { "type": "spawn", "owner": 1, "unit": "rifleman", "count": 4, "at": "landing" },
+        { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 3, "at": "landing" },
+        { "type": "spawn", "owner": 1, "unit": "mortarTeam", "count": 2, "at": "landing" },
+        { "type": "spawn", "owner": 1, "unit": "steelRobot", "count": 1, "at": "landing" },
+        { "type": "spawn", "owner": 1, "unit": "flakWagon", "count": 1, "at": "landing" },
+        { "type": "building", "owner": 2, "building": "radar", "at": [9, 6], "tag": "r1" },
+        { "type": "building", "owner": 2, "building": "radar", "at": [61, 22], "tag": "r2" },
+        { "type": "building", "owner": 2, "building": "radar", "at": [50, 40], "tag": "r3" },
+        { "type": "building", "owner": 2, "building": "powerPlant", "at": [58, 18] },
+        { "type": "building", "owner": 2, "building": "mgTower", "at": [12, 9] },
+        { "type": "building", "owner": 2, "building": "mgTower", "at": [55, 24] },
+        { "type": "building", "owner": 2, "building": "cannonTower", "at": [47, 38], "difficulty": ["medium", "hard"] },
+        { "type": "building", "owner": 2, "building": "rocketBattery", "at": [63, 26], "difficulty": ["hard"] },
+        { "type": "spawn", "owner": 2, "unit": "rifleman", "count": { "easy": 3, "medium": 4, "hard": 5 }, "at": "north" },
+        { "type": "spawn", "owner": 2, "unit": "hoverTank", "count": { "easy": 1, "medium": 2, "hard": 3 }, "at": "camp" },
+        { "type": "spawn", "owner": 2, "unit": "rocketeer", "count": { "easy": 2, "medium": 3, "hard": 4 }, "at": "southEast" },
+        { "type": "message", "key": "mission.g5.m.start" },
+        { "type": "objective", "id": "r1", "key": "mission.g5.o.r1", "area": "north" },
+        { "type": "objective", "id": "r2", "key": "mission.g5.o.r2", "area": "camp" },
+        { "type": "objective", "id": "r3", "key": "mission.g5.o.r3", "area": "southEast" }
+      ]
+    },
+    {
+      "when": [{ "type": "time", "seconds": 30 }],
+      "do": [{ "type": "message", "key": "mission.g5.m.tip" }]
+    },
+    {
+      "when": [{ "type": "every", "seconds": { "easy": 150, "medium": 120, "hard": 90 }, "from": 120 }],
+      "do": [
+        { "type": "message", "key": "mission.g5.m.patrol", "speaker": "enemy" },
+        { "type": "spawn", "owner": 2, "unit": "jetpackRanger", "count": { "easy": 2, "medium": 3, "hard": 4 }, "growth": 0.5, "max": 8, "at": "northEast", "attackTo": "middle" },
+        { "type": "spawn", "owner": 2, "unit": "dragonfly", "count": { "easy": 0, "medium": 1, "hard": 2 }, "at": "northEast", "attackTo": "middle" }
+      ]
+    },
+    {
+      "when": [{ "type": "destroyed", "tag": "r1" }],
+      "do": [{ "type": "complete", "id": "r1" }, { "type": "message", "key": "mission.g5.m.one" }, { "type": "spawn", "owner": 1, "unit": "lightTank", "count": 2, "at": "landing" }]
+    },
+    {
+      "when": [{ "type": "destroyed", "tag": "r2" }],
+      "do": [{ "type": "complete", "id": "r2" }, { "type": "message", "key": "mission.g5.m.one" }, { "type": "spawn", "owner": 1, "unit": "rocketeer", "count": 3, "at": "landing" }]
+    },
+    {
+      "when": [{ "type": "destroyed", "tag": "r3" }],
+      "do": [{ "type": "complete", "id": "r3" }, { "type": "message", "key": "mission.g5.m.one" }, { "type": "spawn", "owner": 1, "unit": "steelRobot", "count": 1, "at": "landing" }]
+    },
+    {
+      "when": [{ "type": "objectivesDone", "ids": ["r1", "r2", "r3"] }],
+      "do": [{ "type": "message", "key": "mission.g5.m.won" }, { "type": "victory" }]
+    },
+    {
+      "when": [{ "type": "army", "owner": 1, "atMost": 0 }],
+      "do": [{ "type": "defeat", "key": "mission.lost.squad" }]
+    }
+  ]
+}
