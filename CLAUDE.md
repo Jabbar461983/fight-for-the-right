@@ -124,7 +124,18 @@ markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt d
   (der Client weckt per `/health` und zeigt einen Hinweis). Deploy nach grüner CI (`autoDeployTrigger: checksPass`).
   Achtung: Jedes Server-Deployment startet den Server neu → laufende Partien enden. Nicht während Spielrunden pushen.
   Adresse: https://fight-for-the-right.onrender.com (GitHub-Variable `SERVER_URL` = wss://…).
-  Lasttest: `node scripts/load-test.ts wss://fight-for-the-right.onrender.com 120` (4 Spieler, misst Ticks/s).
+  Lasttest: `node scripts/load-test.ts wss://fight-for-the-right.onrender.com 120 [easy|medium|hard]` (4 Spieler,
+  misst Ticks/s, meldet Abbrüche). Abbruchtest: `node scripts/drop-test.ts ws://localhost:2567 [lobby|game]`
+  (Gast-Prozess wird hart beendet → Platz frei nach 30 s bzw. KI übernimmt nach 2 Min.).
+- **Absturzschutz (8.11.2026):** Fehler im Spieltakt werden geloggt, der Raum läuft weiter (nach 30 Fehlern in
+  Folge: Partie sauber beenden, Meldung `mp.err.server`). `uncaughtException`/`unhandledRejection` beenden den
+  Prozess nicht. Kann der Client eine Aufnahme nicht einspielen, schickt er `'resync'` → nächste Aufnahme vollständig.
+  Wächter in `GameScene.watchdog()`: 4 s keine Aufnahme → «Verbindung unterbrochen», 45 s → zurück ins Menü
+  (kein eingefrorener Bildschirm mehr). Wachhalten: Server (`RENDER_EXTERNAL_URL`, solange Räume offen) und
+  Client rufen alle 4 Min. `/health` auf; `/health` meldet `uptime` + `rooms` (Neustart erkennbar).
+- KI hinzufügen: Knopf «+ Computergegner» immer sichtbar (Gefecht und Lobby-Gastgeber); ist die Karte voll,
+  wird automatisch auf eine Karte mit mehr Plätzen gewechselt (sonst war z.B. «Gemeinsam gegen KI» zu zweit
+  auf einer 2er-Karte unmöglich).
   Gemessen 7.11.2026: 15 Ticks/s stabil über 8 Min. mit 4 Spielern inkl. KI-Angriffen,
   Aufnahmen alle 132 ms (95 % < 136 ms).
 
