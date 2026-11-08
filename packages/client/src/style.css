@@ -1515,3 +1515,57 @@ td:first-child {
     transform: translate(-50%, -6px);
   }
 }
+/* Spielanleitung */
+.guide-part {
+  margin: 8px 0;
+  border: 3px solid var(--outline);
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.guide-part summary {
+  min-height: 44px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.guide-part > p,
+.guide-part > ul,
+.guide-part > .matchups {
+  margin: 0 14px 12px;
+  line-height: 1.45;
+}
+
+.guide-part li {
+  margin: 4px 0;
+}
+
+.matchups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.matchup {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.matchup img {
+  width: 64px;
+  height: 48px;
+  border-radius: 8px;
+  flex: none;
+}
+
+.matchup div {
+  display: flex;
+  flex-direction: column;
+}
+
+.matchup small {
+  color: var(--muted);
+}

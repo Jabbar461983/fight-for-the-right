@@ -36,14 +36,12 @@ export interface GameConfig {
   bonusPoints?: boolean;
 }
 
-/** Spielbare KI-Stufen. */
-const ENABLED_AI: AiLevel[] = ['easy', 'medium', 'hard'];
 const NAME_KEY = 'fftr.name';
 
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-type Screen = 'main' | 'skirmish' | 'settings' | 'credits' | 'multiplayer' | 'lobby' | 'campaign' | 'briefing';
+type Screen = 'main' | 'skirmish' | 'settings' | 'credits' | 'multiplayer' | 'lobby' | 'campaign' | 'briefing' | 'guide';
 
 /** Spielkonfiguration aus der Startinfo des Servers. */
 export function configFromStart(info: GameStartInfo, net: NetSession): GameConfig {
@@ -79,7 +77,7 @@ export class Menu {
     this.config = this.defaultConfig();
     void getItem<GameConfig>('lastSkirmish').then((c) => {
       if (c && MAPS.some((m) => m.id === c.mapId) && Array.isArray(c.slots) && c.slots.length >= 2) {
-        for (const s of c.slots) if (s.ai && !ENABLED_AI.includes(s.ai)) s.ai = 'easy';
+        for (const s of c.slots) if (s.ai && !AI_LEVELS.includes(s.ai)) s.ai = 'easy';
         this.config = { ...c, net: undefined };
         if (this.screen === 'skirmish') this.render();
       }
@@ -156,6 +154,9 @@ export class Menu {
       case 'briefing':
         this.renderBriefing();
         break;
+      case 'guide':
+        this.renderGuide();
+        break;
     }
     applyI18n(this.root);
   }
@@ -178,6 +179,7 @@ export class Menu {
           <button type="button" class="primary" data-go="campaign" data-i18n="menu.campaign"></button>
           <button type="button" class="primary" data-go="skirmish" data-i18n="menu.skirmish"></button>
           <button type="button" class="primary" data-go="multiplayer" data-i18n="menu.multiplayer"></button>
+          <button type="button" data-go="guide" data-i18n="menu.guide"></button>
           <button type="button" data-go="settings" data-i18n="menu.settings"></button>
           <button type="button" data-go="credits" data-i18n="menu.credits"></button>
         </div>
@@ -423,10 +425,7 @@ export class Menu {
 
   private aiSelect(value: AiLevel, disabled = false): string {
     return `<select data-field="ai" aria-label="${t('skirmish.difficulty')}" ${disabled ? 'disabled' : ''}>${AI_LEVELS.map(
-      (l) =>
-        `<option value="${l}" ${value === l ? 'selected' : ''} ${ENABLED_AI.includes(l) ? '' : 'disabled'}>${t(`ai.${l}`)}${
-          ENABLED_AI.includes(l) ? '' : ` (${t('menu.comingSoon', { n: 4 })})`
-        }</option>`,
+      (l) => `<option value="${l}" ${value === l ? 'selected' : ''}>${t(`ai.${l}`)}</option>`,
     ).join('')}</select>`;
   }
 
@@ -724,6 +723,36 @@ export class Menu {
     this.root.querySelector<HTMLInputElement>('#low-fx')!.addEventListener('change', (e) => {
       void saveSettings({ lowFx: (e.target as HTMLInputElement).checked });
     });
+    this.bindGo();
+  }
+
+  /** Spielanleitung: aufklappbare Abschnitte, kurz und kindgerecht. */
+  private renderGuide(): void {
+    const rules = getRules();
+    const icon = (id: string) => {
+      const d = rules.unit('aero', id);
+      return d ? `<img src="${iconFor(d, PLAYER_COLORS[0])}" alt="" />` : '';
+    };
+    const section = (id: string, body: string, open = false) =>
+      `<details class="guide-part" ${open ? 'open' : ''}><summary>${t(`guide.${id}.title`)}</summary>${body}</details>`;
+    const para = (key: string) => `<p>${esc(t(key))}</p>`;
+    const list = (prefix: string, n: number) => `<ul>${Array.from({ length: n }, (_, i) => `<li>${esc(t(`${prefix}.${i + 1}`))}</li>`).join('')}</ul>`;
+    const matchups = ['rifleman', 'rocketeer', 'lightTank', 'artillery', 'flakWagon', 'gunship', 'engineer']
+      .map((id) => `<div class="matchup">${icon(id)}<div><b>${t(`unit.${id}`)}</b><small>${esc(t(`guide.units.${id}`))}</small></div></div>`)
+      .join('');
+    this.root.innerHTML = `
+      <div class="menu-card wide guide">
+        <h2 data-i18n="guide.title"></h2>
+        ${section('goal', para('guide.goal.text'), true)}
+        ${section('start', list('guide.start', 5))}
+        ${section('mouse', `<ul>${[1, 2, 3, 4, 5, 6, 'transport'].map((i) => `<li>${esc(t(`help.mouse.${i}`))}</li>`).join('')}</ul>`)}
+        ${section('touch', `<ul>${[1, 2, 3, 4, 5, 6, 'transport'].map((i) => `<li>${esc(t(`help.touch.${i}`))}</li>`).join('')}</ul>`)}
+        ${section('economy', list('guide.economy', 4))}
+        ${section('power', para('guide.power.text'))}
+        ${section('units', `${para('guide.units.text')}<div class="matchups">${matchups}</div>`)}
+        ${section('tips', list('guide.tips', 5))}
+        <div class="menu-actions"><button type="button" data-go="main" data-i18n="menu.back"></button></div>
+      </div>`;
     this.bindGo();
   }
 
