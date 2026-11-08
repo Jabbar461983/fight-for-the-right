@@ -49,7 +49,8 @@ scripts/          Werkzeuge (z.B. Kartengenerator)
 - Auslöser: start, time, every (wiederholt), enterArea, destroyed (Markierung/`tag`), built, army, noBase,
   objectivesDone, flag. Aktionen: message (Funkspruch, `speaker` commander/enemy/researcher), objective,
   complete, fail, spawn (`growth` je Wiederholung), building, base (Gebäude spiralförmig um einen Punkt),
-  attack, transfer, reveal, credits, flag, ai (KI einschalten), countdown, victory, defeat.
+  attack, transfer, reveal, credits, flag, ai (KI einschalten), countdown, highlight (Tutorial: Knopf pulsiert,
+  Ziel «cmd:deploy» / «tab:air» / «build:powerPlant», null = aus), victory, defeat.
 - Zahlen dürfen je Stufe verschieden sein: `{ "easy": 1, "medium": 2, "hard": 3 }`.
 - Spieler ist immer id 1. Missionen laufen mit `victory: 'none'`; Sieg/Niederlage nur über Aktionen
   (Aufgeben → Niederlage). Alle Missionstexte in den i18n-Dateien (Test prüft DE + EN).
@@ -89,10 +90,16 @@ markiert und erst gesammelt entfernt (`cleanup`). Ereignisse (`SimEvent`) holt d
 - Oberfläche als **HTML/CSS** (`ui/Hud.ts`, `style.css`): Glimmerit, Strom, Minikarte (nur mit Radar + Strom),
   Bauleiste mit Reitern, Befehlsleiste, Meldungen + Sprechblase, Pause, Endbildschirm.
   Smartphone-Layout per Media-Query `(max-width: 900px), (max-height: 520px)`.
-- Grafiken sind **Platzhalter**, zur Laufzeit auf Canvas gezeichnet: `game/terrainPainter.ts` (Gelände mit
+- Grafiken werden zur Laufzeit auf Canvas gezeichnet (keine Bilddateien): `game/terrainPainter.ts` (Gelände mit
   runden Rändern, freistehende Bäume), `game/textures.ts` (Einheiten/Gebäude je Fraktion + Spielerfarbe,
   Effekte, Bauleisten-Symbole). Texture-Keys bleiben beim späteren Austausch gegen Sprites gleich.
-- Einstellungen in IndexedDB (`storage.ts`), Sprache in localStorage (synchron beim Start nötig).
+- Einstellungen in IndexedDB (`storage.ts`: Spieltempo, Lautstärken, `lowFx` = weniger Effekte), Sprache in
+  localStorage (synchron beim Start nötig).
+- **Ton** (`audio/sound.ts`): alle Effekte und beide Musikstücke (Menü, Gefecht) per WebAudio synthetisiert, keine
+  Dateien. `play(name, vol, pan)`, `music(track)`; im Spiel `sfxAt()` = nur nahe am Bildausschnitt hörbar,
+  Effekte je Art mengenbegrenzt. Ton erst nach erster Berührung (`unlockAudio` in `main.ts`).
+- Spielanleitung im Menü (`renderGuide`), Texte `guide.*`. Test `i18n.test.ts` prüft: DE/EN gleiche Schlüssel,
+  keine Platzhalter-Texte, jeder `t('…')`/`data-i18n` im Client existiert.
 - Dev-Hilfen: `?play` (Gefecht sofort starten), `?debug` (Wege anzeigen), `window.fftr` (nur `npm run dev`).
 - Achtung Browser-Vorschau: Ist das Fenster ausgeblendet, zeichnet der Browser kaum neu – Screenshots sind
   dann veraltet. Zustand lieber per `window.fftr` prüfen.
@@ -160,7 +167,13 @@ npm run maps         # Startkarten neu erzeugen
   Türme, Flächenschaden), Nebel mit Geistern, gemeinsame Bodeneinheiten beider Fraktionen (Aero billiger und
   schneller, Granit zäher), Ingenieur, Bauwagen, KI Leicht, Sieg/Niederlage/Aufgeben, Hauptmenü,
   Endstatistik. Getestet: komplette Partie gegen KI im Browser gewonnen; KI besiegt untätigen Gegner (Test).
-- **Etappe 5 – Kampagne:** fertig, wartet auf Abnahme. A1 «Landung auf Neu-Aurora» (Tutorial auf Kristalltal),
+- **Etappe 6 – Feinschliff:** fertig, wartet auf Abnahme. Leistung (Tempo-Raster für Komponenten/Flussfelder,
+  begrenzte Flussfelder, Minikarten-Nebel als Bild; gemessen 200 Einheiten: Simulation ≈ 1 ms/Tick, Bild ≈ 2,5 ms
+  am PC), Ton und Musik, Bau-Animation/Rauch/Staub/Mündungsfeuer, Tutorial-Hinweise, Spielanleitung,
+  Einstellungen (Lautstärke, weniger Effekte), Balancing (Duell-Tabelle: Schützen > Raketen > Panzer > Schützen;
+  KI: zweite Raffinerie, Mindestarmee, Wellen drücken weiter). KI-Serie 8.11.2026: Schwer gegen Leicht 5 Siege,
+  3 Unentschieden, 0 Niederlagen; Mittel Aero gegen Mittel Granit 2:2. Auf echtem Tablet noch nicht gemessen.
+- **Etappe 5 – Kampagne:** abgenommen (7.11.2026). A1 «Landung auf Neu-Aurora» (Tutorial auf Kristalltal),
   A2 «Rettung im Nebel» (Kommando, eigene Karte Nebelwald), G1 «Die Mauer hält» (15 Min. verteidigen auf
   Vier Winde), G2 «Gegenschlag» (Archipel gegen KI-Basis). Figuren: Kommandantin Lyra Funke (Aero),
   Kommandantin Berta Basalt (Granit), Dr. Ida Quarz (Forscherin, Zivilistin = wird nie beschossen).
@@ -177,6 +190,6 @@ npm run maps         # Startkarten neu erzeugen
   `airborne` = fliegt wirklich (nur Flak/Raketen treffen); Jetpack ist `moveClass air`, aber nicht airborne.
   Darstellung: Flieger mit Höhe (`UnitView.alt`) + Schatten, Rotor dreht sich, Maulwurf als Erdhügel.
   KI-Stand: Schwer vs Leicht ≈ 3 Siege / 4 Unentschieden / 1 Niederlage (8 Testpartien) – Balancing Etappe 6.
-- **Bewusst später:** Sound (Etappe 6), Kampagne (Etappe 5).
+- **Spätere Ideen:** weitere Missionen, Karteneditor, Veteranenstufen, Zuschauermodus, Wiederholungen.
 - Offene Punkte: Strg+Zahl wird von manchen Browsern abgefangen (Ausweichweg: Gruppenknopf lange drücken).
-  KI gegen KI (Leicht) endet oft unentschieden – für Etappe 4/5 Balancing.
+  KI gegen gleich starke KI endet oft unentschieden (30 Min.), Schwer gegen Mittel meist auch.
