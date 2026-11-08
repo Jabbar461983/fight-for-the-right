@@ -1,5 +1,21 @@
 import { Client, type Room } from '@colyseus/sdk';
-import type { GameStartInfo, LobbyState, PingKind, Snapshot } from '@fftr/shared';
+import { netVersion, type GameStartInfo, type LobbyState, type PingKind, type Snapshot } from '@fftr/shared';
+import { getRules } from '../data';
+
+/** Antwort von /health. */
+export interface ServerHealth {
+  ok: boolean;
+  version?: string;
+  uptime?: number;
+  rooms?: number;
+}
+
+let cachedVersion = '';
+/** Fingerabdruck der Inhalte dieses Clients (muss zum Server passen). */
+export function clientVersion(): string {
+  if (!cachedVersion) cachedVersion = netVersion(getRules());
+  return cachedVersion;
+}
 
 /**
  * Verbindung zum Mehrspieler-Server (Colyseus).
@@ -128,26 +144,32 @@ export class NetSession {
    * Weckt den Server (der Gratis-Hoster schläft nach 15 Minuten ein) und meldet,
    * wenn das länger dauert.
    */
-  static async wake(onSlow: () => void): Promise<void> {
+  static async wake(onSlow: () => void): Promise<ServerHealth | null> {
     const slow = window.setTimeout(onSlow, 2500);
     try {
       const ctrl = new AbortController();
       const timeout = window.setTimeout(() => ctrl.abort(), 90_000);
-      await fetch(`${httpUrl()}/health`, { signal: ctrl.signal }).catch(() => undefined);
+      const res = await fetch(`${httpUrl()}/health`, { signal: ctrl.signal }).catch(() => undefined);
       clearTimeout(timeout);
+      return res?.ok ? ((await res.json().catch(() => null)) as ServerHealth | null) : null;
     } finally {
       clearTimeout(slow);
     }
   }
 
+  /** Passt der Server zu diesem Client? (Nein = Server noch nicht aktualisiert oder Seite veraltet.) */
+  static compatible(health: ServerHealth | null): boolean {
+    return !health || health.version === clientVersion();
+  }
+
   static async create(name: string): Promise<NetSession> {
     const client = new Client(serverUrl());
-    return new NetSession(await client.create('game', { name }));
+    return new NetSession(await client.create('game', { name, version: clientVersion() }));
   }
 
   static async join(code: string, name: string): Promise<NetSession> {
     const client = new Client(serverUrl());
-    return new NetSession(await client.joinById(code, { name }));
+    return new NetSession(await client.joinById(code, { name, version: clientVersion() }));
   }
 
   /** Nach dem Neuladen der Seite: zurück in den alten Raum, falls möglich. */

@@ -1,4 +1,4 @@
-import { FACTIONS, PRODUCTION_CATEGORIES, type Faction, type ProductionCategory } from '../data/rules';
+import { FACTIONS, PRODUCTION_CATEGORIES, type Faction, type ProductionCategory, type Rules } from '../data/rules';
 import { tileOf } from '../math/fixed';
 import type { SimEvent } from '../sim/events';
 import type { Simulation } from '../sim/simulation';
@@ -97,6 +97,25 @@ function sameBytes(a: Uint8Array | null, b: Uint8Array): boolean {
 }
 
 /** Index-Tabellen, damit Typen als kleine Zahlen übertragen werden. */
+/** Erhöhen, wenn sich das Format der Netzwerk-Nachrichten ändert. */
+export const NET_PROTOCOL = 1;
+
+/**
+ * Fingerabdruck von Protokoll und Inhalten (Fraktionen, Einheiten, Gebäude, Waffen).
+ * Einheiten & Co. reisen als Listenplatz-Nummer – passen Client und Server nicht
+ * zusammen, kämen falsche Typen an. Deshalb müssen beide Fingerabdrücke gleich sein.
+ */
+export function netVersion(rules: Rules): string {
+  const text = [NET_PROTOCOL, FACTIONS.join(','), rules.unitIds.join(','), rules.buildingIds.join(','), [...rules.weapons.keys()].join(',')].join('|');
+  // FNV-1a, 32 Bit
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
 export class NetIndex {
   readonly units: string[];
   readonly buildings: string[];

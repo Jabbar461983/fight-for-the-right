@@ -14,6 +14,7 @@ import {
   createSkirmish,
   emptySlot,
   makeRoomCode,
+  netVersion,
   teamFor,
   validateStart,
   type GameStartInfo,
@@ -29,6 +30,8 @@ import { hasMap, loadMap, maxPlayersOf, rules } from './data';
 export const SNAPSHOT_EVERY = 2;
 /** So viele Fehler hintereinander im Spieltakt, dann wird die Partie beendet (statt den Server abstürzen zu lassen). */
 const MAX_TICK_ERRORS = 30;
+/** Fingerabdruck der Inhalte dieses Servers (muss zum Client passen). */
+export const SERVER_VERSION = netVersion(rules);
 /** Bereits vergebene Codes (pro Server-Prozess). */
 const usedCodes = new Set<string>();
 
@@ -55,7 +58,8 @@ export class GameRoom extends Room {
   private pendingEvents: SimEvent[] = [];
   private startInfo: Omit<GameStartInfo, 'localPlayer'> | null = null;
 
-  override onCreate(options: { name?: string }): void {
+  override onCreate(options: { name?: string; version?: string }): void {
+    if (options?.version && options.version !== SERVER_VERSION) throw new Error('Version passt nicht (version mismatch).');
     let code = makeRoomCode();
     while (usedCodes.has(code)) code = makeRoomCode();
     usedCodes.add(code);
@@ -79,12 +83,14 @@ export class GameRoom extends Room {
   }
 
   override onDispose(): void {
-    usedCodes.delete(this.lobby.code);
+    if (this.lobby) usedCodes.delete(this.lobby.code);
   }
 
   // ───────────── Beitreten / Verlassen ─────────────
 
-  override onJoin(client: Client, options: { name?: string }): void {
+  override onJoin(client: Client, options: { name?: string; version?: string }): void {
+    // Anderer Versionsstand (z.B. Server noch nicht aktualisiert) → Momentaufnahmen wären falsch
+    if (options?.version && options.version !== SERVER_VERSION) throw new Error('Version passt nicht (version mismatch).');
     if (this.lobby.started) throw new Error('Das Spiel läuft schon.');
     const slot = this.lobby.slots.findIndex((s) => s.kind === 'open');
     if (slot < 0) throw new Error('Der Raum ist voll.');

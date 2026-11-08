@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { boot, type ColyseusTestServer } from '@colyseus/testing';
 import type { GameStartInfo, LobbyState, Snapshot } from '@fftr/shared';
 import { createServer } from '../src/app';
-import type { GameRoom } from '../src/GameRoom';
+import { SERVER_VERSION, type GameRoom } from '../src/GameRoom';
 
 let colyseus: ColyseusTestServer;
 
@@ -44,6 +44,14 @@ describe('Spielraum', () => {
     expect(lobby.slots[1].name).toBe('Ben');
     expect(lobby.slots[0].color).not.toBe(lobby.slots[1].color);
     await guest.leave();
+    await host.leave();
+  });
+
+  it('weist Clients mit anderem Versionsstand ab', async () => {
+    await expect(colyseus.sdk.create('game', { name: 'Alt', version: 'deadbeef' })).rejects.toBeTruthy();
+    const host = await colyseus.sdk.create('game', { name: 'Neu', version: SERVER_VERSION });
+    await expect(colyseus.sdk.joinById(host.roomId, { name: 'Alt', version: 'deadbeef' })).rejects.toBeTruthy();
+    expect(SERVER_VERSION).toMatch(/^[0-9a-f]{8}$/);
     await host.leave();
   });
 

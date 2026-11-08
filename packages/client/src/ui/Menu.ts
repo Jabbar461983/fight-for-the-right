@@ -530,14 +530,19 @@ export class Menu {
     this.busy = true;
     this.setStatus(t('mp.connecting'));
     try {
-      await NetSession.wake(() => this.setStatus(t('mp.waking')));
+      const health = await NetSession.wake(() => this.setStatus(t('mp.waking')));
+      if (!NetSession.compatible(health)) {
+        // Server und Client haben verschiedene Inhalte → Spiel würde einfrieren
+        this.setStatus(t('mp.err.version'));
+        return;
+      }
       const net = await open();
       this.status = '';
       this.attach(net);
       this.show('lobby');
     } catch (e) {
       const msg = String((e as Error)?.message ?? e);
-      this.setStatus(/voll|full/i.test(msg) ? t('mp.err.full') : /läuft|running/i.test(msg) ? t('mp.err.started') : /not found|nicht gefunden|invalid/i.test(msg) ? t('mp.err.notFound') : t('mp.err.connect'));
+      this.setStatus(/version/i.test(msg) ? t('mp.err.version') : /voll|full/i.test(msg) ? t('mp.err.full') : /läuft|running/i.test(msg) ? t('mp.err.started') : /not found|nicht gefunden|invalid/i.test(msg) ? t('mp.err.notFound') : t('mp.err.connect'));
     } finally {
       this.busy = false;
     }
