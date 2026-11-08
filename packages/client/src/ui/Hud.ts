@@ -591,28 +591,66 @@ export class Hud {
     this.emblemUrl = url;
   }
 
-  /** Kurze Meldung oben links; wichtige zusätzlich als Sprechblase mit dem Wappen der eigenen Fraktion. */
-  /** `durationMs`: so lange bleibt die Meldung stehen (danach ausblenden). */
-  message(text: string, kind: 'info' | 'warn' | 'good' = 'info', bubble = false, durationMs = 4000): void {
+  /** Meldungen mit Schlüssel (z.B. «lowPower»), die verschwinden, sobald sich die Lage erledigt hat. */
+  private keyed = new Map<string, HTMLElement>();
+  private bubbleKey: string | null = null;
+
+  /**
+   * Kurze Meldung oben links; wichtige zusätzlich als Sprechblase mit dem Wappen der eigenen Fraktion.
+   * `durationMs`: so lange bleibt sie stehen. `key`: gleiche Meldung ersetzt die alte, `dismiss(key)` blendet sie sofort aus.
+   */
+  message(text: string, kind: 'info' | 'warn' | 'good' = 'info', bubble = false, durationMs = 3000, key?: string): void {
+    if (key) this.dismiss(key);
     const line = document.createElement('div');
     line.className = `msg ${kind}`;
     line.textContent = text;
     this.feed.prepend(line);
     while (this.feed.children.length > 4) this.feed.lastElementChild?.remove();
     window.setTimeout(() => line.classList.add('fade'), durationMs);
-    window.setTimeout(() => line.remove(), durationMs + 700);
+    window.setTimeout(() => {
+      line.remove();
+      if (key && this.keyed.get(key) === line) this.keyed.delete(key);
+    }, durationMs + 700);
+    if (key) this.keyed.set(key, line);
     // Während eines Funkspruchs keine zweite Sprechblase (die Meldung steht ja oben links)
     if (bubble && !this.radioBusy) {
-      this.bubble.onclick = null;
+      this.bubble.onclick = () => {
+        this.bubble.hidden = true;
+        this.bubbleKey = null;
+      };
       this.bubble.innerHTML = this.emblemUrl
         ? `<img class="portrait emblem ${kind}" src="${this.emblemUrl}" alt="" /><p></p>`
         : `<div class="commander ${kind}"></div><p></p>`;
       this.bubble.querySelector('p')!.textContent = text;
       this.bubble.hidden = false;
+      this.bubbleKey = key ?? null;
       window.clearTimeout(Number(this.bubble.dataset.timer));
-      // Sprechblase: normale Meldungen etwas länger als die Zeile, kurze genau so lange
-      const bubbleMs = durationMs >= 4000 ? durationMs + 500 : durationMs;
-      this.bubble.dataset.timer = String(window.setTimeout(() => (this.bubble.hidden = true), bubbleMs));
+      this.bubble.dataset.timer = String(
+        window.setTimeout(() => {
+          this.bubble.hidden = true;
+          this.bubbleKey = null;
+        }, durationMs),
+      );
+    }
+  }
+
+  /** Läuft gerade eine Meldung mit diesem Schlüssel? */
+  showing(key: string): boolean {
+    return this.keyed.has(key) || this.bubbleKey === key;
+  }
+
+  /** Meldung sofort ausblenden (die Lage hat sich erledigt). */
+  dismiss(key: string): void {
+    const line = this.keyed.get(key);
+    if (line) {
+      line.classList.add('fade');
+      window.setTimeout(() => line.remove(), 400);
+      this.keyed.delete(key);
+    }
+    if (this.bubbleKey === key && !this.radioBusy) {
+      window.clearTimeout(Number(this.bubble.dataset.timer));
+      this.bubble.hidden = true;
+      this.bubbleKey = null;
     }
   }
 

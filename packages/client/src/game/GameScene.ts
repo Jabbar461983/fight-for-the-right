@@ -20,6 +20,7 @@ import {
   type BuildingDef,
   type Ghost,
   type Mission,
+  type Player,
   type PingKind,
   type Rules,
   type SimEvent,
@@ -271,7 +272,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const wagon = this.sim.units.find((u) => u.owner === this.local && u.def.deploysTo);
     if (wagon) this.selection.add(wagon.id);
     if (this.mission) this.hud.setObjectives(this.mission.objectives);
-    else this.hud.message(t('msg.welcome'), 'info', true);
+    else this.hud.message(t('msg.welcome'), 'info', true, 6000, 'welcome');
     music('battle');
     this.updateHud();
 
@@ -676,29 +677,30 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           if (e.owner === me) {
             this.lastEventPos = { x: e.x, y: e.y };
             // Einmal gesprochen, Text verschwindet nach 3 Sekunden
-            this.hud.message(t('msg.underAttack'), 'warn', true, 3000);
+            this.hud.message(t('msg.underAttack'), 'warn', true, 3000, 'underAttack');
             speak(t('msg.underAttack'), getLang());
           }
           break;
         case 'buildingReady':
           if (e.owner === me) {
             const def = this.rules.building(this.sim.players[me].faction, e.defId);
-            this.hud.message(t('msg.buildingReady', { name: def ? t(def.nameKey) : e.defId }), 'good');
+            // Steht, bis das Gebäude platziert ist (höchstens 6 s)
+            this.hud.message(t('msg.buildingReady', { name: def ? t(def.nameKey) : e.defId }), 'good', false, 6000, `ready:${e.category}`);
             play('build');
           }
           break;
         case 'unitReady':
           if (e.owner === me) {
             const def = this.rules.unit(this.sim.players[me].faction, e.defId);
-            this.hud.message(t('msg.unitReady', { name: def ? t(def.nameKey) : e.defId }), 'info');
+            this.hud.message(t('msg.unitReady', { name: def ? t(def.nameKey) : e.defId }), 'info', false, 2500);
             play('ready', 0.7);
           }
           break;
         case 'lowPower':
-          if (e.owner === me) this.hud.message(t('msg.lowPower'), 'warn', true);
+          if (e.owner === me) this.hud.message(t('msg.lowPower'), 'warn', true, 4000, 'lowPower');
           break;
         case 'storageFull':
-          if (e.owner === me) this.hud.message(t('msg.storageFull'), 'warn', true);
+          if (e.owner === me) this.hud.message(t('msg.storageFull'), 'warn', true, 4000, 'storageFull');
           break;
         case 'insufficientFunds':
           if (e.owner === me) this.hud.message(t('msg.insufficientFunds'), 'warn');
@@ -749,7 +751,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           }
           break;
         case 'cannotDeploy':
-          if (e.owner === me) this.hud.message(t('msg.cannotDeploy'), 'warn', true);
+          if (e.owner === me) this.hud.message(t('msg.cannotDeploy'), 'warn', true, 3000, 'cannotDeploy');
           break;
         case 'playerDefeated':
           this.hud.message(t('msg.playerDefeated', { name: this.sim.players[e.owner]?.name ?? '?' }), e.owner === me ? 'warn' : 'good', true);
@@ -1109,6 +1111,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
   private updateHud(): void {
     const p = this.sim.players[this.local];
+    this.dismissResolved(p);
     this.hud.setResources(p.credits, p.storage, p.powerProduced, p.powerUsed);
     this.hud.setBuildItems(this.buildItems());
     const counts = new Map<string, { name: string; count: number; rating?: Record<ArmorClass, number> | null }>();
@@ -1135,6 +1138,16 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       placing: !!this.placing && this.lastPointerTouch,
     });
     this.hud.setPlacing(!!this.placing, this.lastPointerTouch);
+  }
+
+  /** Hinweise ausblenden, sobald die Lage erledigt ist (Bauwagen ausgefahren, Strom reicht, Lager frei, Gebäude platziert). */
+  private dismissResolved(p: Player): void {
+    const h = this.hud;
+    if (h.showing('welcome') && !this.sim.units.some((u) => u.owner === this.local && u.def.deploysTo)) h.dismiss('welcome');
+    if (h.showing('cannotDeploy') && !this.sim.units.some((u) => u.owner === this.local && u.def.deploysTo)) h.dismiss('cannotDeploy');
+    if (h.showing('lowPower') && !p.lowPower) h.dismiss('lowPower');
+    if (h.showing('storageFull') && p.credits < p.storage - 100) h.dismiss('storageFull');
+    for (const cat of ['building', 'defense'] as const) if (h.showing(`ready:${cat}`) && !p.ready[cat]) h.dismiss(`ready:${cat}`);
   }
 
   private buildItems(): BuildItemState[] {
