@@ -42,6 +42,8 @@ export interface GameConfig {
 const NAME_KEY = 'fftr.name';
 /** Teams mit eigener Kampagne. */
 const CAMPAIGN_FACTIONS = ['aero', 'granite'] as const;
+/** Meiste Spieler auf einer Karte. */
+const MAX_PLAYERS = Math.max(...MAPS.map((m) => m.maxPlayers));
 
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -307,6 +309,9 @@ export class Menu {
 
   // ───────────── Gefecht gegen KI ─────────────
 
+  /** Hinweis im Gefecht-Bildschirm (z.B. «Karte gewechselt»). */
+  private skirmishNote = '';
+
   private renderSkirmish(): void {
     const cfg = this.config;
     const map = mapInfo(cfg.mapId);
@@ -346,7 +351,11 @@ export class Menu {
         </div>
         <h3 data-i18n="skirmish.players"></h3>
         <div class="slots">${cfg.slots.map(slotRow).join('')}</div>
-        ${cfg.slots.length < map.maxPlayers ? `<button type="button" class="add-ai" id="add-ai">+ ${t('lobby.addAi')}</button>` : ''}
+        <div class="add-ai-row">
+          <button type="button" class="add-ai" id="add-ai" ${cfg.slots.length >= MAX_PLAYERS ? 'disabled' : ''}>+ ${t('lobby.addAi')}</button>
+          <small>${t('skirmish.seats', { used: cfg.slots.length, max: map.maxPlayers })}</small>
+        </div>
+        ${this.skirmishNote ? `<p class="status">${esc(this.skirmishNote)}</p>` : ''}
         <div class="menu-actions">
           <button type="button" data-go="main" data-i18n="menu.back"></button>
           <button type="button" class="primary big" id="start" data-i18n="menu.start"></button>
@@ -362,6 +371,8 @@ export class Menu {
     );
     this.root.querySelector<HTMLSelectElement>('#map-select')!.addEventListener('change', (e) => {
       cfg.mapId = (e.target as HTMLSelectElement).value;
+      const max = mapInfo(cfg.mapId).maxPlayers;
+      this.skirmishNote = cfg.slots.length > max ? t('skirmish.tooManyForMap', { max }) : '';
       rerender();
     });
     this.root.querySelector<HTMLSelectElement>('#credits-select')!.addEventListener('change', (e) => {
@@ -371,9 +382,18 @@ export class Menu {
       cfg.bonusPoints = (e.target as HTMLSelectElement).value === 'on';
     });
     this.root.querySelector('#add-ai')?.addEventListener('click', () => {
+      this.skirmishNote = '';
+      // Karte voll? Dann auf eine Karte mit mehr Plätzen wechseln (sonst passiert scheinbar nichts)
+      if (cfg.slots.length >= map.maxPlayers) {
+        const bigger = MAPS.find((m) => m.maxPlayers > cfg.slots.length);
+        if (!bigger) return;
+        cfg.mapId = bigger.id;
+        this.skirmishNote = t('skirmish.mapSwitched', { map: t(bigger.nameKey), max: bigger.maxPlayers });
+      }
       const used = new Set(cfg.slots.map((s) => s.color));
       const color = PLAYER_COLORS.findIndex((_, i) => !used.has(i));
-      cfg.slots.push({ id: cfg.slots.length + 1, name: '', faction: cfg.slots.length % 2 ? 'granite' : 'aero', color, team: 0, ai: 'easy' });
+      const faction = FACTIONS[(cfg.slots.length + 1) % FACTIONS.length];
+      cfg.slots.push({ id: cfg.slots.length + 1, name: '', faction, color, team: 0, ai: 'easy' });
       rerender();
     });
     this.root.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((b) =>
@@ -564,6 +584,7 @@ export class Menu {
     const link = `${location.origin}${location.pathname}?join=${lobby.code}`;
     const taken = (i: number) => lobby.slots.filter((s, oi) => oi !== i && (s.kind === 'human' || s.kind === 'ai')).map((s) => s.color);
     const mine = lobby.slots.find((s) => s.kind === 'human' && s.sessionId === net.sessionId);
+    const activeCount = lobby.slots.filter((s) => s.kind === 'human' || s.kind === 'ai').length;
     const row = (s: LobbySlot, i: number) => {
       const own = s.kind === 'human' && s.sessionId === net.sessionId;
       const editable = own || (host && s.kind === 'ai');
@@ -617,6 +638,15 @@ export class Menu {
         </div>
         <h3 data-i18n="skirmish.players"></h3>
         <div class="slots">${lobby.slots.map(row).join('')}</div>
+        ${
+          host
+            ? `<div class="add-ai-row">
+          <button type="button" class="add-ai" id="lb-add-ai" ${activeCount >= MAX_PLAYERS ? 'disabled' : ''}>+ ${t('lobby.addAi')}</button>
+          <small>${t('skirmish.seats', { used: activeCount, max: map.maxPlayers })}</small>
+        </div>
+        ${lobby.mode === 'coop' && !lobby.slots.some((s) => s.kind === 'ai') ? `<p class="status">${t('lobby.coopHint')}</p>` : ''}`
+            : ''
+        }
         <h3 data-i18n="lobby.chat"></h3>
         <div class="chat-log">${lobby.chat
           .slice(-6)
@@ -673,6 +703,21 @@ export class Menu {
       );
     });
     this.root.querySelectorAll<HTMLButtonElement>('[data-chat]').forEach((b) => b.addEventListener('click', () => send('chat', { msg: b.dataset.chat })));
+    this.root.querySelector('#lb-add-ai')?.addEventListener('click', () => {
+      // Freien Platz nehmen (zuerst geschlossene, damit offene für Freunde bleiben)
+      const usable = (i: number) => i < map.maxPlayers;
+      let slot = lobby.slots.findIndex((s, i) => usable(i) && s.kind === 'closed');
+      if (slot < 0) slot = lobby.slots.findIndex((s, i) => usable(i) && s.kind === 'open');
+      if (slot < 0) {
+        // Karte voll → auf eine Karte mit mehr Plätzen wechseln
+        const bigger = MAPS.find((m) => m.maxPlayers > activeCount);
+        slot = lobby.slots.findIndex((s) => s.kind === 'closed' || s.kind === 'open');
+        if (!bigger || slot < 0) return;
+        send('settings', { mapId: bigger.id });
+        this.status = t('skirmish.mapSwitched', { map: t(bigger.nameKey), max: bigger.maxPlayers });
+      }
+      net.send('slot', { slot, kind: 'ai', ai: 'easy' });
+    });
     this.root.querySelector('#lb-start')?.addEventListener('click', () => send('start'));
     this.root.querySelector('#lb-ready')?.addEventListener('click', () => send('ready', { ready: !mine?.ready }));
     this.root.querySelector('#lb-leave')!.addEventListener('click', () => {

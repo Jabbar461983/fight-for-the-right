@@ -425,8 +425,16 @@ button.small,
   font-weight: 800;
 }
 
-.add-ai {
+.add-ai-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   margin-top: 8px;
+}
+
+.add-ai:disabled {
+  opacity: 0.5;
 }
 
 .status {
