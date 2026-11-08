@@ -1,4 +1,4 @@
-import type { PlayerStats, Stance } from '@fftr/shared';
+import type { ArmorClass, PlayerStats, Stance } from '@fftr/shared';
 import { applyI18n, getLang, onLangChange, setLang, t, type Lang } from '../i18n';
 
 /**
@@ -24,6 +24,22 @@ export interface BuildItemState {
   queued: number;
   paused: boolean;
   ready: boolean;
+  /** Wogegen die Einheit/der Turm stark ist (Panzerungsklassen). */
+  strong: ArmorClass[];
+}
+
+/** Symbole für die Panzerungsklassen («stark gegen …» in der Bauleiste). */
+export const ARMOR_ICONS: Record<ArmorClass, string> = {
+  infantry: '🧍',
+  light: '🚙',
+  heavy: '🛡️',
+  building: '🏠',
+  air: '✈️',
+};
+
+/** «Stark gegen: Infanterie, Luft» */
+export function strongText(strong: ArmorClass[]): string {
+  return strong.length ? t('hud.strongAgainst', { list: strong.map((c) => t(`armor.${c}`)).join(', ') }) : '';
 }
 
 export interface CommandState {
@@ -329,6 +345,7 @@ export class Hud {
         .map(
           (i) => `<button type="button" class="build-item" data-id="${i.id}">
             <img src="${i.icon}" alt="" draggable="false" />
+            ${i.strong.length ? `<span class="bi-strong" aria-label="${strongText(i.strong)}"><b>💪</b>${i.strong.map((c) => ARMOR_ICONS[c]).join('')}</span>` : ''}
             <span class="bi-progress"></span>
             <span class="bi-name">${t(i.nameKey)}</span>
             <span class="bi-cost"><i class="crystal-icon"></i>${i.cost}</span>
@@ -353,7 +370,8 @@ export class Hud {
       el.classList.toggle('locked', !i.available && !i.ready && i.progress === null);
       el.classList.toggle('ready', i.ready);
       el.classList.toggle('paused', i.paused);
-      el.title = i.available || i.ready ? `${t(i.nameKey)} – ${i.cost}` : t('hud.requires', { list: i.missing.join(', ') });
+      const strong = strongText(i.strong);
+      el.title = (i.available || i.ready ? `${t(i.nameKey)} – ${i.cost}` : t('hud.requires', { list: i.missing.join(', ') })) + (strong ? `\n${strong}` : '');
       el.querySelector<HTMLElement>('.bi-progress')!.style.height = i.progress !== null ? `${Math.round((1 - i.progress) * 100)}%` : '0%';
       el.querySelector<HTMLElement>('.bi-progress')!.classList.toggle('active', i.progress !== null);
       const badge = el.querySelector<HTMLElement>('.bi-badge')!;
@@ -508,11 +526,17 @@ export class Hud {
 
   // ───────────── Auswahl & Statistik ─────────────
 
-  setSelection(entries: { name: string; count: number }[]): void {
+  setSelection(entries: { name: string; count: number; strong?: ArmorClass[] }[]): void {
     const total = entries.reduce((s, e) => s + e.count, 0);
     this.els['selection-title'].textContent =
       total === 0 ? t('hud.selectionNone') : `${t('hud.selection')}: ${t('hud.selectionCount', { count: total })}`;
-    this.els['selection-list'].innerHTML = entries.map((e) => `<li><span>${e.name}</span><b>×${e.count}</b></li>`).join('');
+    const html = entries
+      .map((e) => {
+        const strong = e.strong?.length ? `<small class="sel-strong">💪 ${e.strong.map((c) => ARMOR_ICONS[c]).join('')} ${strongText(e.strong)}</small>` : '';
+        return `<li><span>${e.name}</span><b>×${e.count}</b>${strong}</li>`;
+      })
+      .join('');
+    if (this.els['selection-list'].innerHTML !== html) this.els['selection-list'].innerHTML = html;
   }
 
   setStats(fps: number, units: number): void {
@@ -521,7 +545,14 @@ export class Hud {
 
   // ───────────── Meldungen ─────────────
 
-  /** Kurze Meldung oben links; wichtige zusätzlich als Sprechblase der Kommandantin. */
+  /** Wappen der eigenen Fraktion für Meldungen in der Sprechblase. */
+  private emblemUrl: string | null = null;
+
+  setEmblem(url: string): void {
+    this.emblemUrl = url;
+  }
+
+  /** Kurze Meldung oben links; wichtige zusätzlich als Sprechblase mit dem Wappen der eigenen Fraktion. */
   message(text: string, kind: 'info' | 'warn' | 'good' = 'info', bubble = false): void {
     const line = document.createElement('div');
     line.className = `msg ${kind}`;
@@ -533,7 +564,9 @@ export class Hud {
     // Während eines Funkspruchs keine zweite Sprechblase (die Meldung steht ja oben links)
     if (bubble && !this.radioBusy) {
       this.bubble.onclick = null;
-      this.bubble.innerHTML = `<div class="commander ${kind}"></div><p></p>`;
+      this.bubble.innerHTML = this.emblemUrl
+        ? `<img class="portrait emblem ${kind}" src="${this.emblemUrl}" alt="" /><p></p>`
+        : `<div class="commander ${kind}"></div><p></p>`;
       this.bubble.querySelector('p')!.textContent = text;
       this.bubble.hidden = false;
       window.clearTimeout(Number(this.bubble.dataset.timer));

@@ -1569,3 +1569,37 @@ td:first-child {
 .matchup small {
   color: var(--muted);
 }
+/* «Stark gegen» in der Bauleiste und in der Auswahl */
+.bi-strong {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(17, 18, 29, 0.78);
+  font-size: 12px;
+  line-height: 18px;
+  pointer-events: none;
+}
+
+.bi-strong b {
+  margin-right: 2px;
+  font-weight: normal;
+}
+
+.sel-strong {
+  display: block;
+  width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+/* Fraktions-Wappen in der Sprechblase */
+.bubble .emblem {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+
+.bubble .emblem.warn {
+  filter: drop-shadow(0 0 4px var(--warn));
+}

@@ -213,6 +213,22 @@ export interface BuildingDef extends Omit<z.infer<typeof BuildingSchema>, 'weapo
 
 export type FactionDef = z.infer<typeof FactionSchema>;
 
+/** Ab diesem Schadens-Prozentsatz gilt eine Waffe als «stark gegen» eine Panzerungsklasse. */
+export const STRONG_VERSUS = 80;
+
+/**
+ * Wogegen eine Einheit oder ein Turm gut wirkt – aus den Waffenwerten abgeleitet
+ * (für die Anzeige in der Bauleiste). Leer, wenn unbewaffnet.
+ */
+export function strongAgainst(def: { weapon: WeaponDef | null }): ArmorClass[] {
+  const w = def.weapon;
+  if (!w) return [];
+  return ARMOR_CLASSES.filter((c) => {
+    if (c === 'air' ? w.targets === 'ground' : w.targets === 'air') return false;
+    return w.versus[c] >= STRONG_VERSUS;
+  });
+}
+
 /** Alle Regeln, fertig für die Simulation. */
 export class Rules {
   readonly weapons = new Map<string, WeaponDef>();

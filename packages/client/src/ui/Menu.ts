@@ -749,7 +749,7 @@ export class Menu {
         ${section('touch', `<ul>${[1, 2, 3, 4, 5, 6, 'transport'].map((i) => `<li>${esc(t(`help.touch.${i}`))}</li>`).join('')}</ul>`)}
         ${section('economy', list('guide.economy', 4))}
         ${section('power', para('guide.power.text'))}
-        ${section('units', `${para('guide.units.text')}<div class="matchups">${matchups}</div>`)}
+        ${section('units', `${para('guide.units.text')}${para('guide.units.legend')}<div class="matchups">${matchups}</div>`)}
         ${section('tips', list('guide.tips', 5))}
         <div class="menu-actions"><button type="button" data-go="main" data-i18n="menu.back"></button></div>
       </div>`;

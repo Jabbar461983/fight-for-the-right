@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadRules } from '../src/data/rules';
+import { loadRules, strongAgainst } from '../src/data/rules';
 import { damageFor } from '../src/sim/combat';
 import { GameMap } from '../src/map/gameMap';
 import { TILE, tileCenter } from '../src/math/fixed';
@@ -31,6 +31,25 @@ describe('Regeln', () => {
     expect(aero.hp).toBeLessThan(granite.hp);
     expect(aero.weapon?.id).toBe('rifle');
     expect(rules.building('aero', 'refinery')?.freeUnit).toBe('harvester');
+  });
+
+  it('«stark gegen» passt zum Stein-Schere-Papier-Prinzip', () => {
+    const s = (id: string) => strongAgainst(rules.unit('aero', id)!);
+    expect(s('rifleman')).toEqual(['infantry']);
+    expect(s('rocketeer')).toEqual(['light', 'heavy', 'air']);
+    expect(s('lightTank')).toContain('light');
+    expect(s('flakWagon')).toEqual(['air']);
+    expect(s('gunship')).not.toContain('air');
+    expect(s('engineer')).toEqual([]);
+    // Jede bewaffnete Einheit ist gegen irgendetwas stark, aber keine gegen alles
+    for (const f of ['aero', 'granite'] as const) {
+      for (const u of rules.unitsOf(f)) {
+        if (!u.weapon) continue;
+        const list = strongAgainst(u);
+        expect(list.length, u.id).toBeGreaterThan(0);
+        expect(list.length, u.id).toBeLessThan(5);
+      }
+    }
   });
 
   it('meldet Fehler in Datendateien verständlich', () => {

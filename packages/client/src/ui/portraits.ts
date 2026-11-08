@@ -11,6 +11,126 @@ export type PortraitKind = 'aero' | 'granite' | 'researcher';
 const cache = new Map<string, string>();
 const OUTLINE = '#1d1a2b';
 
+/**
+ * Wappen der Fraktionen (für Meldungen im Spiel):
+ * - Aero-Liga: weisse Flügel mit gelbem Blitz auf blauem Kreis
+ * - Granit-Union: zwei Berggipfel in einem genieteten Schild auf Steingrau
+ */
+export function emblem(faction: 'aero' | 'granite'): string {
+  const key = `emblem_${faction}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  g.lineWidth = 5;
+  g.strokeStyle = OUTLINE;
+  const path = (pts: [number, number][]) => {
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (const [x, y] of pts.slice(1)) g.lineTo(x, y);
+    g.closePath();
+  };
+  if (faction === 'aero') {
+    // Blauer Kreis mit hellem Ring
+    g.beginPath();
+    g.arc(64, 64, 58, 0, Math.PI * 2);
+    g.fillStyle = '#2f6fd0';
+    g.fill();
+    g.stroke();
+    g.beginPath();
+    g.arc(64, 64, 48, 0, Math.PI * 2);
+    g.lineWidth = 3;
+    g.strokeStyle = '#bfe9ff';
+    g.stroke();
+    g.lineWidth = 4;
+    g.strokeStyle = OUTLINE;
+    // Flügel (links und gespiegelt rechts), je drei Federn
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        const y = 52 + i * 12;
+        const len = 40 - i * 9;
+        path([
+          [64 + side * 10, y - 4],
+          [64 + side * (10 + len), y - 10 + i * 2],
+          [64 + side * (6 + len), y + 6],
+          [64 + side * 10, y + 7],
+        ]);
+        g.fillStyle = '#ffffff';
+        g.fill();
+        g.stroke();
+      }
+    }
+    // Blitz in der Mitte
+    path([
+      [70, 26],
+      [52, 66],
+      [64, 66],
+      [56, 102],
+      [78, 56],
+      [66, 56],
+    ]);
+    g.fillStyle = '#ffd23f';
+    g.fill();
+    g.stroke();
+  } else {
+    // Steingrauer Hintergrund-Kreis
+    g.beginPath();
+    g.arc(64, 64, 58, 0, Math.PI * 2);
+    g.fillStyle = '#6b6f7a';
+    g.fill();
+    g.stroke();
+    // Schild
+    g.beginPath();
+    g.moveTo(30, 28);
+    g.lineTo(98, 28);
+    g.lineTo(98, 66);
+    g.quadraticCurveTo(98, 96, 64, 112);
+    g.quadraticCurveTo(30, 96, 30, 66);
+    g.closePath();
+    g.fillStyle = '#e2a04a';
+    g.fill();
+    g.stroke();
+    // Zwei Berggipfel mit Schneekappen
+    path([
+      [36, 88],
+      [56, 46],
+      [72, 72],
+      [80, 58],
+      [94, 88],
+    ]);
+    g.fillStyle = '#8c929e';
+    g.fill();
+    g.stroke();
+    path([
+      [49, 60],
+      [56, 46],
+      [63, 60],
+      [56, 56],
+    ]);
+    g.fillStyle = '#ffffff';
+    g.fill();
+    g.lineWidth = 2;
+    g.stroke();
+    // Nieten am Schildrand
+    g.fillStyle = '#ffd23f';
+    for (const [x, y] of [
+      [38, 36],
+      [90, 36],
+      [64, 36],
+    ]) {
+      g.beginPath();
+      g.arc(x, y, 4, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  const url = c.toDataURL();
+  cache.set(key, url);
+  return url;
+}
+
 export function portrait(kind: PortraitKind, mood: 'normal' | 'angry' = 'normal'): string {
   const key = `${kind}_${mood}`;
   const hit = cache.get(key);

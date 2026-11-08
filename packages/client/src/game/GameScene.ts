@@ -12,8 +12,10 @@ import {
   createMission,
   createSkirmish,
   pxToUnits,
+  strongAgainst,
   tileOf,
   unitsToPx,
+  type ArmorClass,
   type Building,
   type BuildingDef,
   type Ghost,
@@ -30,7 +32,7 @@ import { getMission, getMissions, getRules, loadMap } from '../data';
 import { t } from '../i18n';
 import { InputController, type InputTarget } from '../input/InputController';
 import { getSettings, markMissionDone } from '../storage';
-import { portrait, type PortraitKind } from '../ui/portraits';
+import { emblem, portrait, type PortraitKind } from '../ui/portraits';
 import { music, play, type Sfx } from '../audio/sound';
 import { Hud, type BuildItemState, type BuildTab, type HudActions } from '../ui/Hud';
 import type { GameConfig } from '../ui/Menu';
@@ -250,6 +252,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
 
     this.controls = new InputController(document.getElementById('game')!, document.getElementById('dragbox')!, this);
     this.hud = new Hud(document.getElementById('sidebar')!, document.getElementById('commandbar')!, document.getElementById('stage')!, this, !!this.net);
+    this.hud.setEmblem(emblem(this.sim.players[this.local]?.faction ?? 'aero'));
     this.prepareMinimap();
     this.scale.on('resize', this.clampCamera, this);
     this.events.once('shutdown', () => this.teardown());
@@ -1077,16 +1080,16 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const p = this.sim.players[this.local];
     this.hud.setResources(p.credits, p.storage, p.powerProduced, p.powerUsed);
     this.hud.setBuildItems(this.buildItems());
-    const counts = new Map<string, { name: string; count: number }>();
+    const counts = new Map<string, { name: string; count: number; strong?: ArmorClass[] }>();
     for (const id of this.selection) {
       const u = this.sim.getUnit(id);
       if (!u) continue;
-      const e = counts.get(u.def.id) ?? { name: t(u.def.nameKey), count: 0 };
+      const e = counts.get(u.def.id) ?? { name: t(u.def.nameKey), count: 0, strong: strongAgainst(u.def) };
       e.count++;
       counts.set(u.def.id, e);
     }
     const sb = this.selectedBuilding ? this.sim.getBuilding(this.selectedBuilding) : undefined;
-    if (sb) counts.set('_b', { name: t(sb.def.nameKey), count: 1 });
+    if (sb) counts.set('_b', { name: t(sb.def.nameKey), count: 1, strong: strongAgainst(sb.def) });
     this.hud.setSelection([...counts.values()]);
     this.hud.setStats(this.game.loop.actualFps, this.sim.units.length);
     const units = this.selectedUnits();
@@ -1140,6 +1143,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
         queued: queue.length,
         paused: queue.some((q) => q.paused),
         ready: (category === 'building' || category === 'defense') && p.ready[category] === def.id,
+        strong: strongAgainst(def),
       });
     };
     for (const b of this.rules.buildingsOf(p.faction)) add(b, b.category);
