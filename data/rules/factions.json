@@ -10,7 +10,7 @@
       "id": "granite",
       "nameKey": "faction.granite",
       "palette": { "main": "#c8a24a", "second": "#6b863e", "metal": "#c29a46", "dark": "#4a3b22" },
-      "unitModifiers": { "cost": 1.02, "speed": 0.9, "hp": 1.22, "buildTime": 1.0 }
+      "unitModifiers": { "cost": 1.05, "speed": 0.9, "hp": 1.22, "buildTime": 1.0 }
     }
   ]
 }

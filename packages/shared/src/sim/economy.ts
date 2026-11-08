@@ -91,10 +91,14 @@ export class Economy {
     let best = -1;
     let bestD = Infinity;
     const r = maxTiles === Infinity ? Math.max(m.width, m.height) : maxTiles;
+    // Nur Kristalle, die der Sammler über Land erreicht (nicht auf anderen Inseln)
+    const start = m.nearestPassable(cx, cy, MoveClass.Vehicle);
+    const comp = start ? m.componentOf(start.tx, start.ty, MoveClass.Vehicle) : -1;
     for (let ty = Math.max(0, cy - r); ty <= Math.min(m.height - 1, cy + r); ty++) {
       for (let tx = Math.max(0, cx - r); tx <= Math.min(m.width - 1, cx + r); tx++) {
         const i = ty * m.width + tx;
         if (this.crystal[i] <= 0 || m.blocked[i] !== 0) continue;
+        if (comp >= 0 && m.componentOf(tx, ty, MoveClass.Vehicle) !== comp) continue;
         let d = (tx - cx) * (tx - cx) + (ty - cy) * (ty - cy);
         if (claimed?.has(i)) d += 400;
         if (this.crystal[i] < LOW_TILE) d += 6;

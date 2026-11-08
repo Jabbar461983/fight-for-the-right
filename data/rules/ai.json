@@ -104,12 +104,12 @@
         "rifleman": 3,
         "rocketeer": 2,
         "lightTank": 6,
-        "artillery": 1,
+        "artillery": 2,
         "flakWagon": 1,
         "gunship": 2,
         "hoverTank": 3,
         "cometFighter": 1,
-        "jetpackRanger": 2,
+        "jetpackRanger": 1,
         "shieldBearer": 2,
         "colossus": 2,
         "bomberAirship": 1
@@ -127,7 +127,7 @@
       "expand": true,
       "twoFronts": true,
       "repairBuildings": true,
-      "attackAdvantage": 1.0
+      "attackAdvantage": 1.3
     }
   }
 }

@@ -145,7 +145,8 @@ export class SkirmishAi implements TickListener {
     // Kraftwerke und Raffinerien (Wirtschaft) gehen immer.
     const minutes = sim.tick / (15 * 60);
     const minArmy = Math.min(14, Math.floor(4 + minutes * 1.2));
-    const armyFirst = this.level !== 'easy' && economyReady && armySize < minArmy && p.credits < 1500;
+    // Auf Inselkarten entsteht die Armee erst mit Flugfeld/Werft → dort keine Bremse (sonst Stillstand)
+    const armyFirst = this.level !== 'easy' && this.landConnected !== false && economyReady && armySize < minArmy && p.credits < 1500;
     for (const cat of ['building', 'defense'] as const) {
       if (p.queues[cat].length > 0 || p.ready[cat]) continue;
       if (cat === 'defense' && (!economyReady || (!rich && (owned.get('mgTower') ?? 0) > 0))) continue;
