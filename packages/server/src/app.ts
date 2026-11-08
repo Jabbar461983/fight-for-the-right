@@ -1,6 +1,6 @@
 import { Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
-import { GameRoom } from './GameRoom';
+import { GameRoom, openRoomCount } from './GameRoom';
 
 /** Baut den Server (ohne ihn zu starten) – so können Tests ihn selbst hochfahren. */
 export function createServer(): Server {
@@ -9,7 +9,8 @@ export function createServer(): Server {
     express: (app) => {
       // Für den Gesundheits-Check des Hosters und zum Aufwecken nach dem Einschlafen
       app.get('/health', (_req, res) => {
-        res.json({ ok: true, game: 'fight-for-the-right' });
+        // uptime: Sekunden seit dem Start – zeigt, ob der Server neu gestartet wurde
+        res.json({ ok: true, game: 'fight-for-the-right', uptime: Math.round(process.uptime()), rooms: openRoomCount() });
       });
     },
     greet: false,

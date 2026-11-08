@@ -27,8 +27,15 @@ import { hasMap, loadMap, maxPlayersOf, rules } from './data';
 
 /** Momentaufnahme alle 2 Ticks (7,5 pro Sekunde) – der Client interpoliert dazwischen. */
 export const SNAPSHOT_EVERY = 2;
+/** So viele Fehler hintereinander im Spieltakt, dann wird die Partie beendet (statt den Server abstürzen zu lassen). */
+const MAX_TICK_ERRORS = 30;
 /** Bereits vergebene Codes (pro Server-Prozess). */
 const usedCodes = new Set<string>();
+
+/** Anzahl offener Räume (Lobby oder Partie) – solange > 0, hält sich der Server wach. */
+export function openRoomCount(): number {
+  return usedCodes.size;
+}
 
 /**
  * Ein privater Spielraum: zuerst Lobby, dann die laufende Partie.
@@ -223,7 +230,16 @@ export class GameRoom extends Room {
     this.onMessage('cmd', (client: Client, cmd: unknown) => {
       const player = this.playerOf.get(client.sessionId);
       if (!this.sim || !player) return;
-      this.sim.issue(player, cmd);
+      try {
+        this.sim.issue(player, cmd);
+      } catch (e) {
+        console.error(`[Raum ${this.roomId}] Fehler bei einem Befehl:`, e);
+      }
+    });
+    // Client konnte eine Aufnahme nicht verarbeiten → nächste wieder vollständig schicken
+    this.onMessage('resync', (client: Client) => {
+      const player = this.playerOf.get(client.sessionId);
+      if (this.sim && this.index && player) this.encoders.set(client.sessionId, new SnapshotEncoder(this.sim, player, this.index));
     });
     this.on('ping', L.ping, (client, m) => {
       const player = this.playerOf.get(client.sessionId);
@@ -279,18 +295,47 @@ export class GameRoom extends Room {
     client.send('snap', enc.encode([]));
   }
 
+  /** Fehler im Spieltakt hintereinander – bei zu vielen wird die Partie sauber beendet. */
+  private tickErrors = 0;
+
   private tick(): void {
     const sim = this.sim;
     if (!sim) return;
-    sim.step();
-    this.pendingEvents.push(...sim.drainEvents());
+    try {
+      sim.step();
+      this.pendingEvents.push(...sim.drainEvents());
+      this.tickErrors = 0;
+    } catch (e) {
+      // Ein Fehler darf nie den ganzen Server (und alle anderen Partien) mitreissen
+      this.tickErrors++;
+      console.error(`[Raum ${this.roomId}] Fehler im Spieltakt ${sim.tick}:`, e);
+      if (this.tickErrors >= MAX_TICK_ERRORS) this.abortGame();
+      return;
+    }
     if (sim.tick % SNAPSHOT_EVERY !== 0) return;
     const events = this.pendingEvents;
     this.pendingEvents = [];
     for (const client of this.clients) {
       const enc = this.encoders.get(client.sessionId);
-      if (enc) client.send('snap', enc.encode(events));
+      if (!enc) continue;
+      try {
+        client.send('snap', enc.encode(events));
+      } catch (e) {
+        console.error(`[Raum ${this.roomId}] Fehler bei der Momentaufnahme für ${client.sessionId}:`, e);
+        // Neuer Encoder = nächste Aufnahme ist wieder vollständig
+        const player = this.playerOf.get(client.sessionId);
+        if (player && this.index) this.encoders.set(client.sessionId, new SnapshotEncoder(sim, player, this.index));
+      }
     }
+  }
+
+  /** Partie lässt sich nicht weiterrechnen: Spieler informieren und den Raum schliessen. */
+  private abortGame(): void {
+    console.error(`[Raum ${this.roomId}] Partie wird nach wiederholten Fehlern beendet.`);
+    this.broadcast('error', { key: 'mp.err.server' });
+    this.setSimulationInterval(undefined);
+    this.sim = null;
+    void this.disconnect();
   }
 
   /** Für Tests. */

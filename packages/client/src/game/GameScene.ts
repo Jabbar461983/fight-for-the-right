@@ -59,6 +59,10 @@ const PICK_TOLERANCE_TOUCH = 22;
 const TURN_SPEED = 9;
 
 /** Zeichenebenen (Tiefe). */
+/** Mehrspieler-Wachhund: so lange ohne Momentaufnahme → «Verbindung unterbrochen» bzw. Partie beenden. */
+const STALL_MS = 4000;
+const LOST_MS = 45_000;
+
 /** Schussgeräusch je Geschossart. */
 const SHOT_SOUND: Record<string, Sfx> = {
   bullet: 'bullet',
@@ -205,6 +209,10 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     this.pings = [];
     this.mission = null;
     this.fxAlive = 0;
+    this.stalled = false;
+    this.lostHandled = false;
+    this.lastFrameAt = 0;
+    this.lastSnapAt = 0;
     this.missionEndKey = undefined;
     this.lastCountdown = -1;
   }
@@ -429,6 +437,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     if (this.net) {
       // Mehrspieler: der Server rechnet; wir interpolieren zwischen den Momentaufnahmen
       alpha = Math.min(1, (performance.now() - this.lastSnapAt) / this.snapInterval);
+      this.watchdog();
     } else {
       if (!this.paused && !this.ended) {
         this.accumulator += Math.min(delta, 250) * getSettings().gameSpeed;
@@ -1748,8 +1757,19 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   private onSnapshot(s: Snapshot): void {
     if (!this.netIndex) return;
     const first = this.sim.units.length === 0 && this.sim.buildings.length === 0;
-    applySnapshot(this.sim, s, this.netIndex, this.local);
+    try {
+      applySnapshot(this.sim, s, this.netIndex, this.local);
+    } catch (e) {
+      // Aufnahme passt nicht (z.B. eine verlorene Nachricht): vollständige Aufnahme anfordern statt einzufrieren
+      console.error('Momentaufnahme fehlerhaft – fordere vollständige an', e);
+      this.net?.send('resync');
+      return;
+    }
     this.lastSnapAt = performance.now();
+    if (this.stalled) {
+      this.stalled = false;
+      this.hud.setConnection('ok');
+    }
     this.handleEvents(this.sim.drainEvents());
     if (s.full) this.updateFog();
     if (first) {
@@ -1797,9 +1817,34 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   }
 
   private onConnection(state: 'ok' | 'dropped' | 'lost'): void {
+    if (this.lostHandled) return;
     this.hud.setConnection(state);
     if (state === 'lost' && !this.ended) {
+      this.lostHandled = true;
       this.time.delayedCall(4000, () => this.onExit());
+    }
+  }
+
+  /** Mehrspieler: Kommen keine Momentaufnahmen mehr, wird das angezeigt statt still einzufrieren. */
+  private stalled = false;
+  private lostHandled = false;
+  private lastFrameAt = 0;
+
+  private watchdog(): void {
+    const now = performance.now();
+    // War das Gerät im Standby (keine Bilder), zählt diese Zeit nicht – erst neu messen
+    if (this.lastFrameAt && now - this.lastFrameAt > 2000) this.lastSnapAt = Math.max(this.lastSnapAt, now);
+    this.lastFrameAt = now;
+    if (this.ended || this.lastSnapAt === 0 || this.lostHandled) return;
+    const gap = now - this.lastSnapAt;
+    if (gap > STALL_MS && !this.stalled) {
+      this.stalled = true;
+      this.hud.setConnection('dropped');
+    }
+    if (gap > LOST_MS) {
+      // Server antwortet nicht mehr (z.B. neu gestartet): sauber beenden statt einzufrieren
+      void this.net?.leave();
+      this.onConnection('lost');
     }
   }
 

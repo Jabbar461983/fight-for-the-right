@@ -214,6 +214,11 @@
   "mp.err.notFound": "Diesen Raum gibt es nicht (mehr). Code richtig?",
   "mp.err.connect": "Keine Verbindung zum Server. Bitte später nochmal versuchen.",
   "mp.err.lost": "Die Verbindung ist abgebrochen.",
+  "mp.err.server": "Auf dem Server ist ein Fehler passiert – die Partie musste beendet werden.",
+  "skirmish.seats": "Plätze: {used} von {max}",
+  "skirmish.mapSwitched": "Karte gewechselt auf «{map}» – dort ist Platz für {max} Spieler.",
+  "skirmish.tooManyForMap": "Diese Karte hat nur {max} Plätze – überzählige Spieler wurden entfernt.",
+  "lobby.coopHint": "Für «Gemeinsam gegen KI» braucht es mindestens einen Computergegner.",
 
   "lobby.title": "Lobby",
   "lobby.code": "Raum-Code",

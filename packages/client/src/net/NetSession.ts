@@ -66,12 +66,20 @@ export class NetSession {
       this.onConnection?.('ok');
     });
     room.onLeave(() => {
+      window.clearInterval(this.keepAlive);
       if (!this.left) this.onConnection?.('lost');
       sessionStorage.removeItem(RESUME_KEY);
     });
     room.onError((code, message) => console.warn('Raum-Fehler', code, message));
     this.saveResume();
+    // Wachhalten: Der Gratis-Hoster zählt nur neue HTTP-Anfragen als «Aktivität»,
+    // nicht die offene Spielverbindung – deshalb alle 4 Minuten kurz anklopfen.
+    this.keepAlive = window.setInterval(() => {
+      fetch(`${httpUrl()}/health`).catch(() => undefined);
+    }, 4 * 60 * 1000);
   }
+
+  private keepAlive = 0;
 
   get isHost(): boolean {
     return this.lobby?.hostSessionId === this.room.sessionId;
@@ -97,6 +105,7 @@ export class NetSession {
 
   async leave(): Promise<void> {
     this.left = true;
+    window.clearInterval(this.keepAlive);
     sessionStorage.removeItem(RESUME_KEY);
     try {
       await this.room.leave(true);

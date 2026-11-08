@@ -138,6 +138,33 @@ describe('Spielraum', () => {
     await host.leave();
   });
 
+  it('übersteht Fehler im Spieltakt und schickt auf Wunsch eine vollständige Aufnahme', async () => {
+    const host = await colyseus.sdk.create('game', { name: 'Anna' });
+    host.send('slot', { slot: 1, kind: 'ai', ai: 'easy' });
+    await next<LobbyState>(host, 'lobby', (l) => l.slots[1].kind === 'ai');
+    const startP = next<GameStartInfo>(host, 'start');
+    const fullP = next<Snapshot>(host, 'snap', (s) => !!s.full);
+    host.send('start');
+    await startP;
+    await fullP;
+    const room = colyseus.getRoomById(host.roomId) as unknown as GameRoom;
+    const sim = room.simulation!;
+    // Ein paar Ticks werfen einen Fehler – der Raum muss weiterlaufen
+    const realStep = sim.step.bind(sim);
+    let failures = 3;
+    sim.step = () => {
+      if (failures-- > 0) throw new Error('Testfehler');
+      realStep();
+    };
+    await next<Snapshot>(host, 'snap');
+    expect(room.simulation).toBe(sim);
+    // Client meldet kaputten Spiegel → nächste Aufnahme ist vollständig
+    const resyncP = next<Snapshot>(host, 'snap', (s) => !!s.full);
+    host.send('resync');
+    await resyncP;
+    await host.leave();
+  });
+
   it('ein laufendes Spiel nimmt keine neuen Spieler auf', async () => {
     const host = await colyseus.sdk.create('game', { name: 'Anna' });
     host.send('slot', { slot: 1, kind: 'ai', ai: 'easy' });
