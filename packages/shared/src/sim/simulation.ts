@@ -248,8 +248,12 @@ export class Simulation {
   /** Stellt mehrere Einheiten als Traube um eine Kachel auf. */
   spawnFormation(entries: { type: string; count: number }[], owner: number, tx: number, ty: number): Unit[] {
     const total = entries.reduce((s, e) => s + e.count, 0);
-    const start = this.map.nearestPassable(tx, ty, MoveClass.Vehicle) ?? { tx, ty };
-    const slots = collectSlots(this.map, MoveClass.Vehicle, start, total);
+    // Schiffe brauchen Wasser-, alle anderen Landplätze (Flieger: wie Fahrzeuge, damit sie nicht über dem Meer starten)
+    const faction = this.players[owner]?.faction;
+    const first = faction && entries.length ? this.rules.unit(faction, entries[0].type) : undefined;
+    const cls = first?.moveClassId === MoveClass.Naval ? MoveClass.Naval : MoveClass.Vehicle;
+    const start = this.map.nearestPassable(tx, ty, cls) ?? { tx, ty };
+    const slots = collectSlots(this.map, cls, start, total);
     const out: Unit[] = [];
     let s = 0;
     for (const e of entries) {

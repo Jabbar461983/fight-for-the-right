@@ -51,6 +51,10 @@ const Trigger = z.discriminatedUnion('type', [
   /** Spieler hat keine Gebäude (ausser Mauern) und keinen Bauwagen mehr. */
   z.object({ type: z.literal('noBase'), owner: Owner }),
   z.object({ type: z.literal('objectivesDone'), ids: z.array(z.string()).min(1) }),
+  /** Alles mit dieser Markierung gehört dem Spieler (z.B. von einem Ingenieur übernommen). */
+  z.object({ type: z.literal('owned'), tag: z.string(), owner: Owner }),
+  /** Wie viele mit dieser Markierung noch leben (Konvoi, Geleitschutz). */
+  z.object({ type: z.literal('alive'), tag: z.string(), atLeast: z.number().int().optional(), atMost: z.number().int().optional() }),
   z.object({ type: z.literal('flag'), name: z.string() }),
 ]);
 export type MissionTrigger = z.infer<typeof Trigger>;
@@ -60,7 +64,8 @@ const Stance = z.enum(STANCES);
 const Action = z.discriminatedUnion('type', [
   /** Funkspruch als Sprechblase. */
   z.object({ type: z.literal('message'), key: z.string(), speaker: z.enum(['commander', 'enemy', 'researcher']).default('commander'), difficulty: Difficulty }),
-  z.object({ type: z.literal('objective'), id: z.string(), key: z.string(), difficulty: Difficulty }),
+  /** Ziel; mit rea wird es auf der Karte markiert (Pfeil am Bildrand, Fähnchen, Minikarte). */
+  z.object({ type: z.literal('objective'), id: z.string(), key: z.string(), area: z.string().optional(), difficulty: Difficulty }),
   z.object({ type: z.literal('complete'), id: z.string(), difficulty: Difficulty }),
   z.object({ type: z.literal('fail'), id: z.string(), difficulty: Difficulty }),
   /** Einheiten im Gebiet erscheinen lassen; `growth` = so viele mehr bei jeder Wiederholung. */
@@ -79,7 +84,7 @@ const Action = z.discriminatedUnion('type', [
     difficulty: Difficulty,
   }),
   /** Gebäude hinstellen (sucht den nächsten freien Platz um die Kachel). */
-  z.object({ type: z.literal('building'), owner: Owner, building: z.string(), at: z.tuple([z.number().int(), z.number().int()]), tag: z.string().optional(), difficulty: Difficulty }),
+  z.object({ type: z.literal('building'), owner: z.number().int().min(0).max(4), building: z.string(), at: z.tuple([z.number().int(), z.number().int()]), tag: z.string().optional(), difficulty: Difficulty }),
   /** Mehrere Gebäude rund um einen Punkt (mit Abstand, ohne Kristalle). */
   z.object({
     type: z.literal('base'),
@@ -98,7 +103,14 @@ const Action = z.discriminatedUnion('type', [
   z.object({ type: z.literal('credits'), owner: Owner, amount: Num, difficulty: Difficulty }),
   z.object({ type: z.literal('flag'), name: z.string(), difficulty: Difficulty }),
   /** Computergegner einschalten (Stufe = Schwierigkeit der Mission, wenn nicht angegeben). */
-  z.object({ type: z.literal('ai'), owner: Owner, level: z.enum(AI_LEVELS).optional(), difficulty: Difficulty }),
+  z.object({
+    type: z.literal('ai'),
+    owner: Owner,
+    level: z.enum(AI_LEVELS).optional(),
+    /** KI-Stufe je Schwierigkeit der Mission (spätere Missionen: auch auf «Leicht» schon Mittel). */
+    levels: z.object({ easy: z.enum(AI_LEVELS), medium: z.enum(AI_LEVELS), hard: z.enum(AI_LEVELS) }).optional(),
+    difficulty: Difficulty,
+  }),
   /** Tutorial: Knopf pulsieren lassen («cmd:deploy», «tab:infantry», «build:powerPlant»; null = aus). */
   z.object({ type: z.literal('highlight'), target: z.string().regex(/^(cmd|tab|build):[a-zA-Z]+$/).nullable(), difficulty: Difficulty }),
   /** Sichtbarer Countdown (z.B. «Durchhalten: 14:59»). */
@@ -147,12 +159,14 @@ export function loadMission(json: unknown, rules: Rules): MissionDef {
     if (name !== undefined && !m.areas[name]) throw new Error(`Mission ${m.id}: unbekanntes Gebiet «${name}».`);
   };
   const factionOf = (owner: number) => {
+    if (owner === 0) return 'aero' as const; // neutral (Bonus-Punkte)
     const p = m.players.find((pl) => pl.id === owner);
     if (!p) throw new Error(`Mission ${m.id}: unbekannter Spieler ${owner}.`);
     return p.faction;
   };
   for (const e of m.events) {
     for (const t of e.when) if (t.type === 'enterArea') areaOk(t.area);
+    for (const a of e.do) if (a.type === 'objective') areaOk(a.area);
     for (const a of e.do) {
       if (a.type === 'spawn') {
         areaOk(a.at);
@@ -178,6 +192,8 @@ export interface Objective {
   id: string;
   key: string;
   status: 'open' | 'done' | 'failed';
+  /** Zielgebiet auf der Karte (Kacheln: x, y, Breite, Höhe). */
+  area?: [number, number, number, number];
 }
 
 /** Wie oft Auslöser geprüft werden (Ticks). */
@@ -311,6 +327,15 @@ export class Mission implements TickListener {
         );
       case 'objectivesDone':
         return t.ids.every((id) => this.objectives.find((o) => o.id === id)?.status === 'done');
+      case 'owned': {
+        const ids = this.tags.get(t.tag) ?? [];
+        const alive = ids.map((id) => sim.getTarget(id)).filter((x) => !!x);
+        return alive.length > 0 && alive.every((x) => x!.owner === t.owner);
+      }
+      case 'alive': {
+        const n = (this.tags.get(t.tag) ?? []).filter((id) => sim.getTarget(id) || sim.stored.has(id)).length;
+        return (t.atLeast === undefined || n >= t.atLeast) && (t.atMost === undefined || n <= t.atMost);
+      }
       case 'flag':
         return this.flags.has(t.name);
     }
@@ -339,7 +364,7 @@ export class Mission implements TickListener {
         break;
       case 'objective': {
         if (this.objectives.some((o) => o.id === a.id)) break;
-        const o: Objective = { id: a.id, key: a.key, status: 'open' };
+        const o: Objective = { id: a.id, key: a.key, status: 'open', area: a.area ? this.def.areas[a.area] : undefined };
         this.objectives.push(o);
         sim.emit({ type: 'objective', id: o.id, key: o.key, status: 'open' });
         break;
@@ -413,7 +438,7 @@ export class Mission implements TickListener {
         this.flags.add(a.name);
         break;
       case 'ai':
-        sim.listeners.splice(sim.listeners.indexOf(this), 0, new SkirmishAi(a.owner, a.level ?? this.difficulty, sim));
+        sim.listeners.splice(sim.listeners.indexOf(this), 0, new SkirmishAi(a.owner, a.levels?.[this.difficulty] ?? a.level ?? this.difficulty, sim));
         break;
       case 'countdown':
         this.countdown = { endTick: sim.tick + this.ticks(a.seconds), key: a.key };
@@ -469,8 +494,8 @@ export class Mission implements TickListener {
   private place(owner: number, id: string, tx: number, ty: number, gap: number): Building | null {
     const sim = this.sim;
     const p = sim.players[owner];
-    const def = p ? sim.rules.building(p.faction, id) : undefined;
-    if (!def) return null;
+    const def = sim.rules.building(p?.faction ?? 'aero', id);
+    if (!def || (!p && owner !== 0)) return null;
     const cx = tx - (def.width >> 1);
     const cy = ty - (def.height >> 1);
     for (let r = 0; r <= 14; r++) {
@@ -480,7 +505,7 @@ export class Mission implements TickListener {
           const x = cx + dx;
           const y = cy + dy;
           if (!this.freeFor(owner, def, x, y, gap)) continue;
-          return placeBuilding(sim, owner, def, x, y);
+          return owner === 0 ? sim.addBuilding(def, 0, x, y) : placeBuilding(sim, owner, def, x, y);
         }
       }
     }
