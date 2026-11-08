@@ -12,7 +12,7 @@
   --outline: #11121d;
   --sidebar-w: 280px;
   --btn: 52px;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   color: var(--text);
   background: var(--bg);
 }
@@ -618,7 +618,7 @@ button.on {
   border-left: 4px solid var(--accent);
   font-size: 14px;
   font-weight: 600;
-  transition: opacity 1s;
+  transition: opacity 0.6s;
 }
 
 .msg.warn {
@@ -1602,4 +1602,182 @@ td:first-child {
 
 .bubble .emblem.warn {
   filter: drop-shadow(0 0 4px var(--warn));
+}
+/* Ziel-Symbole und Sterne-Bewertung */
+.armor-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+}
+
+.armor-icon.infantry {
+  color: #9dff5c;
+}
+
+.armor-icon.light {
+  color: #5ab4ff;
+}
+
+.armor-icon.heavy {
+  color: #ffb02e;
+}
+
+.armor-icon.building {
+  color: #ff9ad5;
+}
+
+.armor-icon.air {
+  color: #5ff0ff;
+}
+
+.bi-strong {
+  display: flex;
+  gap: 1px;
+  padding: 1px 3px;
+}
+
+.bi-info {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--outline);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--outline);
+  font: italic 700 15px/22px Arial, Helvetica, sans-serif;
+  text-align: center;
+  z-index: 2;
+  cursor: help;
+}
+
+/* Grössere Trefferfläche (mind. 44 px) für Finger */
+.bi-info::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+.stars {
+  white-space: nowrap;
+  color: #4a4d6e;
+  letter-spacing: 1px;
+}
+
+.stars b {
+  color: var(--accent-2);
+  font-weight: normal;
+}
+
+.stars.none {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+table.rating {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.rating td {
+  padding: 2px 4px;
+}
+
+table.rating td:first-child {
+  width: 22px;
+}
+
+table.rating td:last-child {
+  text-align: right;
+}
+
+table.rating tr.strong td:nth-child(2) {
+  font-weight: 700;
+}
+
+.unit-info header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.unit-info .close {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.sel-rating {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.sel-rating small,
+.unit-info small {
+  color: var(--muted);
+}
+
+.armor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.armor-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.matchup table.rating {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.matchup > div {
+  flex: 1;
+}
+#selection-list li {
+  flex-wrap: wrap;
+}
+
+/* Überall Arial – auch Knöpfe, Eingabefelder und Auswahllisten (erben sonst die Systemschrift) */
+button,
+input,
+select,
+textarea,
+option {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Sterne-Tabelle: feste Spalten, damit die Sterne in der schmalen Seitenleiste ganz sichtbar bleiben */
+table.rating {
+  table-layout: fixed;
+}
+
+table.rating td {
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+table.rating td:last-child {
+  width: 64px;
+  text-align: right;
+}
+
+table.rating .stars {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+table.rating td:nth-child(2) {
+  white-space: normal;
+  overflow-wrap: break-word;
+  padding-right: 6px;
 }

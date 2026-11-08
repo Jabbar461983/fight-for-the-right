@@ -1,4 +1,5 @@
-import type { ArmorClass, PlayerStats, Stance } from '@fftr/shared';
+import { ARMOR_CLASSES, type ArmorClass, type PlayerStats, type Stance } from '@fftr/shared';
+import { armorIcon, ratingTable, ratingText } from './armorIcons';
 import { applyI18n, getLang, onLangChange, setLang, t, type Lang } from '../i18n';
 
 /**
@@ -24,22 +25,13 @@ export interface BuildItemState {
   queued: number;
   paused: boolean;
   ready: boolean;
-  /** Wogegen die Einheit/der Turm stark ist (Panzerungsklassen). */
-  strong: ArmorClass[];
+  /** Wirksamkeit gegen jede Ziel-Art (0–5 Sterne); null = unbewaffnet. */
+  rating: Record<ArmorClass, number> | null;
 }
 
-/** Symbole für die Panzerungsklassen («stark gegen …» in der Bauleiste). */
-export const ARMOR_ICONS: Record<ArmorClass, string> = {
-  infantry: '🧍',
-  light: '🚙',
-  heavy: '🛡️',
-  building: '🏠',
-  air: '✈️',
-};
-
-/** «Stark gegen: Infanterie, Luft» */
-export function strongText(strong: ArmorClass[]): string {
-  return strong.length ? t('hud.strongAgainst', { list: strong.map((c) => t(`armor.${c}`)).join(', ') }) : '';
+/** Ziel-Arten mit mindestens 4 Sternen. */
+function strongClasses(r: Record<ArmorClass, number> | null | undefined): ArmorClass[] {
+  return r ? ARMOR_CLASSES.filter((c) => r[c] >= 4) : [];
 }
 
 export interface CommandState {
@@ -217,6 +209,7 @@ export class Hud {
         </div>
         <nav class="tabs">${BUILD_TABS.map((tb) => `<button type="button" data-tab="${tb}" data-i18n="tab.${tb}"></button>`).join('')}</nav>
         <div class="build-grid" id="build-grid"></div>
+        <div class="unit-info panel" id="unit-info" hidden></div>
         <p class="place-hint" id="place-hint" hidden data-i18n="hud.placeHint"></p>
         ${
           this.multiplayer
@@ -247,7 +240,7 @@ export class Hud {
         </section>
         <footer id="stats"></footer>
       </div>`;
-    for (const id of ['credits', 'power-fill', 'power-wrap', 'radar-off', 'build-grid', 'place-hint', 'selection-title', 'selection-list', 'stats']) {
+    for (const id of ['credits', 'power-fill', 'power-wrap', 'radar-off', 'build-grid', 'unit-info', 'place-hint', 'selection-title', 'selection-list', 'stats']) {
       this.els[id] = sb.querySelector(`#${id}`)!;
     }
 
@@ -345,7 +338,8 @@ export class Hud {
         .map(
           (i) => `<button type="button" class="build-item" data-id="${i.id}">
             <img src="${i.icon}" alt="" draggable="false" />
-            ${i.strong.length ? `<span class="bi-strong" aria-label="${strongText(i.strong)}"><b>💪</b>${i.strong.map((c) => ARMOR_ICONS[c]).join('')}</span>` : ''}
+            ${strongClasses(i.rating).length ? `<span class="bi-strong">${strongClasses(i.rating).map((c) => armorIcon(c, 15)).join('')}</span>` : ''}
+            ${i.rating ? `<span class="bi-info" data-info="${i.id}" role="button" aria-label="${t('hud.info')}">i</span>` : ''}
             <span class="bi-progress"></span>
             <span class="bi-name">${t(i.nameKey)}</span>
             <span class="bi-cost"><i class="crystal-icon"></i>${i.cost}</span>
@@ -354,6 +348,19 @@ export class Hud {
           </button>`,
         )
         .join('');
+      // ⓘ: Bewertung zeigen statt bauen (eigene Pointer-Ereignisse, damit das Bauen nicht startet)
+      grid.querySelectorAll<HTMLElement>('.bi-info').forEach((el) => {
+        const stop = (e: Event) => e.stopPropagation();
+        el.addEventListener('pointerdown', stop);
+        el.addEventListener('pointerup', (e) => {
+          e.stopPropagation();
+          this.toggleInfo(el.dataset.info!);
+        });
+        el.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
       grid.querySelectorAll<HTMLButtonElement>('.build-item').forEach((el) => {
         const id = el.dataset.id!;
         onPress(
@@ -370,8 +377,9 @@ export class Hud {
       el.classList.toggle('locked', !i.available && !i.ready && i.progress === null);
       el.classList.toggle('ready', i.ready);
       el.classList.toggle('paused', i.paused);
-      const strong = strongText(i.strong);
-      el.title = (i.available || i.ready ? `${t(i.nameKey)} – ${i.cost}` : t('hud.requires', { list: i.missing.join(', ') })) + (strong ? `\n${strong}` : '');
+      el.title =
+        (i.available || i.ready ? `${t(i.nameKey)} – ${i.cost}` : t('hud.requires', { list: i.missing.join(', ') })) +
+        (i.rating ? `\n${t('rating.title')}\n${ratingText(i.rating)}` : '');
       el.querySelector<HTMLElement>('.bi-progress')!.style.height = i.progress !== null ? `${Math.round((1 - i.progress) * 100)}%` : '0%';
       el.querySelector<HTMLElement>('.bi-progress')!.classList.toggle('active', i.progress !== null);
       const badge = el.querySelector<HTMLElement>('.bi-badge')!;
@@ -422,6 +430,31 @@ export class Hud {
     // Auf dem Handy ist die Seitenleiste vielleicht zugeklappt → den Aufklapp-Knopf zeigen
     if (inSidebar && this.sidebar.classList.contains('collapsed')) el = this.sidebar.querySelector('.sb-toggle');
     el?.classList.add('hint');
+  }
+
+  /** Info-Tafel zu einer Einheit/einem Turm aus der Bauleiste: Sterne gegen jede Ziel-Art. */
+  private infoId: string | null = null;
+
+  private toggleInfo(id: string): void {
+    const panel = this.els['unit-info'];
+    const item = this.items.find((i) => i.id === id);
+    if (!panel || !item?.rating || this.infoId === id) {
+      this.infoId = null;
+      if (panel) panel.hidden = true;
+      return;
+    }
+    this.infoId = id;
+    panel.hidden = false;
+    panel.innerHTML = `<header><b></b><button type="button" class="close" aria-label="${t('cmd.cancel')}">✕</button></header>
+      <small>${t('rating.title')}</small>${ratingTable(item.rating)}`;
+    panel.querySelector('b')!.textContent = t(item.nameKey);
+    panel.querySelector('.close')!.addEventListener('click', () => this.toggleInfo(id));
+    // Nur die Seitenleiste scrollen (nicht die ganze Seite), damit die Tafel sichtbar ist
+    const body = panel.closest<HTMLElement>('.sb-body');
+    if (body) {
+      const top = panel.offsetTop - body.offsetTop;
+      if (top + panel.offsetHeight > body.scrollTop + body.clientHeight) body.scrollTop = top + panel.offsetHeight - body.clientHeight + 8;
+    }
   }
 
   setPlacing(placing: boolean, touch: boolean): void {
@@ -526,14 +559,20 @@ export class Hud {
 
   // ───────────── Auswahl & Statistik ─────────────
 
-  setSelection(entries: { name: string; count: number; strong?: ArmorClass[] }[]): void {
+  setSelection(entries: { name: string; count: number; rating?: Record<ArmorClass, number> | null }[]): void {
     const total = entries.reduce((s, e) => s + e.count, 0);
     this.els['selection-title'].textContent =
       total === 0 ? t('hud.selectionNone') : `${t('hud.selection')}: ${t('hud.selectionCount', { count: total })}`;
+    // Bei genau einer Art: ganze Sterne-Tabelle; bei mehreren nur die Stärken als Symbole
     const html = entries
       .map((e) => {
-        const strong = e.strong?.length ? `<small class="sel-strong">💪 ${e.strong.map((c) => ARMOR_ICONS[c]).join('')} ${strongText(e.strong)}</small>` : '';
-        return `<li><span>${e.name}</span><b>×${e.count}</b>${strong}</li>`;
+        const detail =
+          e.rating && entries.length === 1
+            ? `<div class="sel-rating"><small>${t('rating.title')}</small>${ratingTable(e.rating)}</div>`
+            : strongClasses(e.rating).length
+              ? `<span class="sel-strong">${strongClasses(e.rating).map((c) => armorIcon(c, 14)).join('')}</span>`
+              : '';
+        return `<li><span>${e.name}</span><b>×${e.count}</b>${detail}</li>`;
       })
       .join('');
     if (this.els['selection-list'].innerHTML !== html) this.els['selection-list'].innerHTML = html;
@@ -553,14 +592,15 @@ export class Hud {
   }
 
   /** Kurze Meldung oben links; wichtige zusätzlich als Sprechblase mit dem Wappen der eigenen Fraktion. */
-  message(text: string, kind: 'info' | 'warn' | 'good' = 'info', bubble = false): void {
+  /** `durationMs`: so lange bleibt die Meldung stehen (danach ausblenden). */
+  message(text: string, kind: 'info' | 'warn' | 'good' = 'info', bubble = false, durationMs = 4000): void {
     const line = document.createElement('div');
     line.className = `msg ${kind}`;
     line.textContent = text;
     this.feed.prepend(line);
     while (this.feed.children.length > 4) this.feed.lastElementChild?.remove();
-    window.setTimeout(() => line.classList.add('fade'), 4000);
-    window.setTimeout(() => line.remove(), 5000);
+    window.setTimeout(() => line.classList.add('fade'), durationMs);
+    window.setTimeout(() => line.remove(), durationMs + 700);
     // Während eines Funkspruchs keine zweite Sprechblase (die Meldung steht ja oben links)
     if (bubble && !this.radioBusy) {
       this.bubble.onclick = null;
@@ -570,7 +610,9 @@ export class Hud {
       this.bubble.querySelector('p')!.textContent = text;
       this.bubble.hidden = false;
       window.clearTimeout(Number(this.bubble.dataset.timer));
-      this.bubble.dataset.timer = String(window.setTimeout(() => (this.bubble.hidden = true), 4500));
+      // Sprechblase: normale Meldungen etwas länger als die Zeile, kurze genau so lange
+      const bubbleMs = durationMs >= 4000 ? durationMs + 500 : durationMs;
+      this.bubble.dataset.timer = String(window.setTimeout(() => (this.bubble.hidden = true), bubbleMs));
     }
   }
 

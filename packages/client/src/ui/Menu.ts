@@ -1,5 +1,7 @@
 import {
   AI_LEVELS,
+  ARMOR_CLASSES,
+  effectiveness,
   CHAT_MESSAGES,
   FACTIONS,
   GAME_MODES,
@@ -18,6 +20,7 @@ import { PLAYER_COLORS, iconFor } from '../game/textures';
 import { NetSession } from '../net/NetSession';
 import { getItem, getSettings, loadProgress, saveLastDifficulty, saveSettings, setItem, type CampaignProgress } from '../storage';
 import { portrait } from './portraits';
+import { armorIcon, ratingTable } from './armorIcons';
 import { play, setVolumes } from '../audio/sound';
 
 /** Alles, was die Spielszene für eine Partie braucht. */
@@ -738,7 +741,11 @@ export class Menu {
     const para = (key: string) => `<p>${esc(t(key))}</p>`;
     const list = (prefix: string, n: number) => `<ul>${Array.from({ length: n }, (_, i) => `<li>${esc(t(`${prefix}.${i + 1}`))}</li>`).join('')}</ul>`;
     const matchups = ['rifleman', 'rocketeer', 'lightTank', 'artillery', 'flakWagon', 'gunship', 'engineer']
-      .map((id) => `<div class="matchup">${icon(id)}<div><b>${t(`unit.${id}`)}</b><small>${esc(t(`guide.units.${id}`))}</small></div></div>`)
+      .map((id) => {
+        const d = rules.unit('aero', id);
+        const table = d?.weapon ? ratingTable(effectiveness(d)) : '';
+        return `<div class="matchup">${icon(id)}<div><b>${t(`unit.${id}`)}</b><small>${esc(t(`guide.units.${id}`))}</small>${table}</div></div>`;
+      })
       .join('');
     this.root.innerHTML = `
       <div class="menu-card wide guide">
@@ -749,7 +756,7 @@ export class Menu {
         ${section('touch', `<ul>${[1, 2, 3, 4, 5, 6, 'transport'].map((i) => `<li>${esc(t(`help.touch.${i}`))}</li>`).join('')}</ul>`)}
         ${section('economy', list('guide.economy', 4))}
         ${section('power', para('guide.power.text'))}
-        ${section('units', `${para('guide.units.text')}${para('guide.units.legend')}<div class="matchups">${matchups}</div>`)}
+        ${section('units', `${para('guide.units.text')}${para('guide.units.legend')}<p class="armor-legend">${ARMOR_CLASSES.map((c) => `<span>${armorIcon(c, 20)} ${t(`armor.${c}`)}</span>`).join('')}</p><div class="matchups">${matchups}</div>`)}
         ${section('tips', list('guide.tips', 5))}
         <div class="menu-actions"><button type="button" data-go="main" data-i18n="menu.back"></button></div>
       </div>`;

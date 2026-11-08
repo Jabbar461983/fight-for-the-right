@@ -242,6 +242,34 @@ export function play(name: Sfx, vol = 1, pan = 0): void {
   }
 }
 
+// ───────────── Sprachausgabe ─────────────
+
+/**
+ * Spricht einen kurzen Satz mit der Sprachausgabe des Geräts (z.B. «Wir werden angegriffen!»).
+ * Lautstärke = Effekt-Lautstärke. Ohne Sprachausgabe: ersatzweise der Alarmton.
+ */
+export function speak(text: string, lang: 'de' | 'en'): void {
+  if (volumes.sfx <= 0) return;
+  const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+    play('alert', 0.8);
+    return;
+  }
+  try {
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang === 'de' ? 'de-DE' : 'en-US';
+    const voice = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang));
+    if (voice) u.voice = voice;
+    u.volume = Math.min(1, volumes.sfx * 1.1);
+    u.rate = 1.05;
+    u.pitch = 1.05;
+    synth.speak(u);
+  } catch {
+    play('alert', 0.8);
+  }
+}
+
 // ───────────── Musik (selbst erzeugte Retro-Schleifen) ─────────────
 
 export type Track = 'menu' | 'battle';

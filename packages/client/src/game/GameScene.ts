@@ -12,7 +12,7 @@ import {
   createMission,
   createSkirmish,
   pxToUnits,
-  strongAgainst,
+  effectiveness,
   tileOf,
   unitsToPx,
   type ArmorClass,
@@ -29,11 +29,11 @@ import {
 } from '@fftr/shared';
 import type { NetSession, PingMessage } from '../net/NetSession';
 import { getMission, getMissions, getRules, loadMap } from '../data';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { InputController, type InputTarget } from '../input/InputController';
 import { getSettings, markMissionDone } from '../storage';
 import { emblem, portrait, type PortraitKind } from '../ui/portraits';
-import { music, play, type Sfx } from '../audio/sound';
+import { music, play, speak, type Sfx } from '../audio/sound';
 import { Hud, type BuildItemState, type BuildTab, type HudActions } from '../ui/Hud';
 import type { GameConfig } from '../ui/Menu';
 import { MINIMAP_COLORS, paintTerrain } from './terrainPainter';
@@ -667,8 +667,9 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
         case 'underAttack':
           if (e.owner === me) {
             this.lastEventPos = { x: e.x, y: e.y };
-            this.hud.message(t('msg.underAttack'), 'warn', true);
-            play('alert', 0.8);
+            // Einmal gesprochen, Text verschwindet nach 3 Sekunden
+            this.hud.message(t('msg.underAttack'), 'warn', true, 3000);
+            speak(t('msg.underAttack'), getLang());
           }
           break;
         case 'buildingReady':
@@ -1080,16 +1081,16 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     const p = this.sim.players[this.local];
     this.hud.setResources(p.credits, p.storage, p.powerProduced, p.powerUsed);
     this.hud.setBuildItems(this.buildItems());
-    const counts = new Map<string, { name: string; count: number; strong?: ArmorClass[] }>();
+    const counts = new Map<string, { name: string; count: number; rating?: Record<ArmorClass, number> | null }>();
     for (const id of this.selection) {
       const u = this.sim.getUnit(id);
       if (!u) continue;
-      const e = counts.get(u.def.id) ?? { name: t(u.def.nameKey), count: 0, strong: strongAgainst(u.def) };
+      const e = counts.get(u.def.id) ?? { name: t(u.def.nameKey), count: 0, rating: u.def.weapon ? effectiveness(u.def) : null };
       e.count++;
       counts.set(u.def.id, e);
     }
     const sb = this.selectedBuilding ? this.sim.getBuilding(this.selectedBuilding) : undefined;
-    if (sb) counts.set('_b', { name: t(sb.def.nameKey), count: 1, strong: strongAgainst(sb.def) });
+    if (sb) counts.set('_b', { name: t(sb.def.nameKey), count: 1, rating: sb.def.weapon ? effectiveness(sb.def) : null });
     this.hud.setSelection([...counts.values()]);
     this.hud.setStats(this.game.loop.actualFps, this.sim.units.length);
     const units = this.selectedUnits();
@@ -1143,7 +1144,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
         queued: queue.length,
         paused: queue.some((q) => q.paused),
         ready: (category === 'building' || category === 'defense') && p.ready[category] === def.id,
-        strong: strongAgainst(def),
+        rating: def.weapon ? effectiveness(def) : null,
       });
     };
     for (const b of this.rules.buildingsOf(p.faction)) add(b, b.category);
