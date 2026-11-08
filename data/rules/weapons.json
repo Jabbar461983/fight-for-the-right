@@ -3,7 +3,7 @@
     {
       "id": "rifle",
       "damage": 14,
-      "versus": { "infantry": 100, "light": 30, "heavy": 15, "building": 15, "air": 0 },
+      "versus": { "infantry": 100, "light": 20, "heavy": 10, "building": 15, "air": 0 },
       "range": 4,
       "reload": 1.0,
       "projectile": "bullet",
@@ -15,7 +15,7 @@
       "damage": 45,
       "versus": { "infantry": 25, "light": 100, "heavy": 100, "building": 55, "air": 100 },
       "range": 5,
-      "reload": 2.2,
+      "reload": 2.0,
       "projectile": "rocket",
       "projectileSpeed": 8,
       "targets": "both"
@@ -28,6 +28,7 @@
       "reload": 1.5,
       "projectile": "cannon",
       "projectileSpeed": 14,
+      "splash": 0.3,
       "targets": "ground"
     },
     {
@@ -169,7 +170,7 @@
     },
     {
       "id": "hoverCannon",
-      "damage": 26,
+      "damage": 30,
       "versus": { "infantry": 90, "light": 100, "heavy": 55, "building": 45, "air": 0 },
       "range": 4.5,
       "reload": 1.3,

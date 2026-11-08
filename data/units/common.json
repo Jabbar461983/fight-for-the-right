@@ -28,7 +28,7 @@
       "speed": 1.4,
       "radius": 0.22,
       "sight": 5,
-      "hp": 90,
+      "hp": 115,
       "cost": 300,
       "buildTime": 8,
       "prerequisites": ["barracks"],
