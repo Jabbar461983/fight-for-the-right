@@ -47,13 +47,17 @@ scripts/          Werkzeuge (z.B. Kartengenerator)
   ([x, y, Breite, Höhe] in Kacheln) und `events`. Ereignis: `when` (alle Auslöser müssen zutreffen),
   `do` (Aktionen), optional `delay` (Sekunden) und `difficulty` (nur auf diesen Stufen).
 - Auslöser: start, time, every (wiederholt), enterArea, destroyed (Markierung/`tag`), built, army, noBase,
-  objectivesDone, flag. Aktionen: message (Funkspruch, `speaker` commander/enemy/researcher), objective,
+  objectivesDone, flag, owned (Markiertes gehört Spieler X, z.B. per Ingenieur), alive (wie viele Markierte leben noch). Aktionen: message (Funkspruch, `speaker` commander/enemy/researcher), objective,
   complete, fail, spawn (`growth` je Wiederholung), building, base (Gebäude spiralförmig um einen Punkt),
-  attack, transfer, reveal, credits, flag, ai (KI einschalten), countdown, highlight (Tutorial: Knopf pulsiert,
+  attack, transfer, reveal, credits, flag, ai (KI einschalten; `levels` = KI-Stufe je Schwierigkeit), countdown, highlight (Tutorial: Knopf pulsiert,
   Ziel «cmd:deploy» / «tab:air» / «build:powerPlant», null = aus), victory, defeat.
 - Zahlen dürfen je Stufe verschieden sein: `{ "easy": 1, "medium": 2, "hard": 3 }`.
 - Spieler ist immer id 1. Missionen laufen mit `victory: 'none'`; Sieg/Niederlage nur über Aktionen
   (Aufgeben → Niederlage). Alle Missionstexte in den i18n-Dateien (Test prüft DE + EN).
+- `objective` mit `area`: Ziel wird auf der Karte markiert (Fähnchen, Pfeil am Bildrand, Minikarte, 📍-Knopf).
+  `building` mit Besitzer 0 = neutral (Glimmerit-Quellen). Verbündete: weitere Spieler mit `team` wie Spieler 1.
+- Kampagnen (8.11.2026): je 8 Missionen für Aero (A1–A8) und Granit (G1–G8), Schwierigkeit steigt (spätere Missionen
+  mit mehr bzw. stärkeren KI-Gegnern, auch auf «Leicht»). Missionskarten: die vier Gefechtskarten + Nebelwald.
 - Neue Mission: JSON in `data/missions`, in `packages/client/src/data.ts` eintragen, Texte ergänzen,
   in `test/mission.test.ts` aufnehmen. Freischaltung: erste je Fraktion offen, sonst Vorgängerin (gleiche
   Fraktion, `order` − 1) auf irgendeiner Stufe geschafft. Fortschritt in IndexedDB (`campaign`).
