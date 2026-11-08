@@ -15,7 +15,8 @@ export type ArmorClass = (typeof ARMOR_CLASSES)[number];
 export const PRODUCTION_CATEGORIES = ['building', 'defense', 'infantry', 'vehicle', 'air', 'naval'] as const;
 export type ProductionCategory = (typeof PRODUCTION_CATEGORIES)[number];
 
-export const FACTIONS = ['aero', 'granite'] as const;
+/** Alle spielbaren Teams. Die Reihenfolge ist Teil des Netzwerkformats (Index) – neue nur hinten anhängen. */
+export const FACTIONS = ['aero', 'granite', 'volt', 'corsair', 'frost', 'jungle'] as const;
 export type Faction = (typeof FACTIONS)[number];
 
 // ───────────── Schemas ─────────────
@@ -37,7 +38,8 @@ export const WeaponSchema = z.object({
   minRange: z.number().min(0).default(0),
   /** Nachladezeit in Sekunden. */
   reload: z.number().positive(),
-  projectile: z.enum(['bullet', 'rocket', 'cannon', 'shell', 'flak', 'bomb']),
+  /** arc = Blitz (Volt-Kollektiv), wird als Lichtbogen gezeichnet. */
+  projectile: z.enum(['bullet', 'rocket', 'cannon', 'shell', 'flak', 'bomb', 'arc']),
   /** Geschosstempo in Kacheln pro Sekunde. */
   projectileSpeed: z.number().positive(),
   /** Flächenschaden-Radius in Kacheln (0 = nur das Ziel). */
@@ -72,6 +74,8 @@ export const UnitSchema = z.object({
   ammo: z.number().int().positive().optional(),
   /** Gräbt sich beim Fahren ein (unsichtbar für Gegner). */
   burrows: z.boolean().default(false),
+  /** Tarnung (Dschungel-Ranger): unsichtbar, solange die Einheit steht und nicht schiesst – ausser ein Gegner ist ganz nah. */
+  camouflage: z.boolean().default(false),
   /** Zivilist (z.B. Forscherin in der Kampagne): wird nie beschossen. */
   civilian: z.boolean().default(false),
   /** Schutzschild für Infanterie in der Nähe. */

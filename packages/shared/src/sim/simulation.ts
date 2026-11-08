@@ -42,6 +42,8 @@ export interface TickListener {
 
 /** Nach so vielen Ticks ohne Kampf darf «Basis wird angegriffen» erneut gemeldet werden. */
 const ATTACK_NOTIFY_TICKS = 15 * 20;
+/** Getarnte Einheiten werden erst aus dieser Nähe entdeckt (2,5 Kacheln). */
+const CAMO_SPOT_RANGE = Math.trunc(TILE * 5 / 2);
 
 /**
  * Die Spielsimulation. Reine Logik ohne Grafik: läuft im Browser (Einzelspieler)
@@ -150,7 +152,11 @@ export class Simulation {
   /** Sieht der Spieler dieses Ziel (Einheit: ihre Kachel, Gebäude: irgendeine Kachel)? */
   canSee(player: number, t: Unit | Building): boolean {
     if (this.isAlly(player, t.owner)) return true;
-    if (!('tx' in t) && t.burrowed) return false; // eingegrabener Maulwurf
+    if (!('tx' in t) && t.burrowed) {
+      // Eingegrabener Maulwurf: unsichtbar. Getarnte Einheit: nur wer ganz nah ist, entdeckt sie.
+      if (!t.def.camouflage) return false;
+      return this.spotsNearby(player, t, CAMO_SPOT_RANGE);
+    }
     if ('tx' in t) {
       for (let y = t.ty; y < t.ty + t.def.height; y++) {
         for (let x = t.tx; x < t.tx + t.def.width; x++) if (this.isVisible(player, x, y)) return true;
@@ -158,6 +164,24 @@ export class Simulation {
       return false;
     }
     return this.isVisible(player, tileOf(t.x), tileOf(t.y));
+  }
+
+  /** Hat der Spieler (oder ein Verbündeter) eine Einheit oder ein Gebäude in diesem Umkreis? */
+  private spotsNearby(player: number, t: Unit, range: number): boolean {
+    const r2 = range * range;
+    for (const u of this.units) {
+      if (u.dead || !this.isAlly(player, u.owner)) continue;
+      const dx = u.x - t.x;
+      const dy = u.y - t.y;
+      if (dx * dx + dy * dy <= r2) return true;
+    }
+    for (const b of this.buildings) {
+      if (b.dead || !this.isAlly(player, b.owner)) continue;
+      const dx = b.x - t.x;
+      const dy = b.y - t.y;
+      if (dx * dx + dy * dy <= r2) return true;
+    }
+    return false;
   }
 
   // ───────────────────────────── Ereignisse ─────────────────────────────
@@ -671,10 +695,15 @@ export class Simulation {
     this.movement.step(this.units, this.hash);
     // Maulwurf: in Fahrt eingegraben, beim Anhalten taucht er auf
     for (const u of this.units) {
-      if (!u.def.burrows || u.dead) continue;
-      const was = u.burrowed;
-      u.burrowed = u.order !== null;
-      if (was && !u.burrowed) this.emit({ type: 'surfaced', owner: u.owner, id: u.id, x: u.x, y: u.y });
+      if (u.dead) continue;
+      if (u.def.burrows) {
+        const was = u.burrowed;
+        u.burrowed = u.order !== null;
+        if (was && !u.burrowed) this.emit({ type: 'surfaced', owner: u.owner, id: u.id, x: u.x, y: u.y });
+      } else if (u.def.camouflage) {
+        // Tarnung: steht still und schiesst nicht → versteckt (nutzt dasselbe Feld wie der Maulwurf)
+        u.burrowed = u.order === null && u.targetId === 0;
+      }
     }
     recomputePower(this);
     if (this.tick % 3 === 1) updateFog(this);

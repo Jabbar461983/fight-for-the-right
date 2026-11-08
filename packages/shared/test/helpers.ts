@@ -17,7 +17,7 @@ export function rulesFiles() {
     buildings: loadData('rules/buildings.json'),
     factions: loadData('rules/factions.json'),
     ai: loadData('rules/ai.json'),
-    units: [loadData('units/common.json'), loadData('units/aero.json'), loadData('units/granite.json')],
+    units: ['common', 'aero', 'granite', 'volt', 'corsair', 'frost', 'jungle'].map((f) => loadData(`units/${f}.json`)),
   };
 }
 

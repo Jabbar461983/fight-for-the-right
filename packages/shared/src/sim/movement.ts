@@ -55,9 +55,16 @@ export class Movement {
       list.push(u);
       byClass.set(u.def.moveClassId, list);
     }
+    // Gemeinsames Tempo: Bodentruppen fahren so schnell wie die langsamste, Flieger ebenso unter sich –
+    // so kommt eine Angriffswelle zusammen an statt tröpfchenweise.
+    const isAir = (u: Unit) => u.def.moveClassId === MoveClass.Air && u.def.airborne;
+    const slowest = (list: Unit[]) => (list.length > 1 ? Math.min(...list.map((u) => u.def.speedUnits)) : 0);
+    const groundCap = slowest(units.filter((u) => !isAir(u) && !u.def.harvestCapacity));
+    const airCap = slowest(units.filter(isAir));
+    const cap = (u: Unit) => (u.def.harvestCapacity ? 0 : isAir(u) ? airCap : groundCap);
     for (const [cls, group] of [...byClass.entries()].sort((a, b) => a[0] - b[0])) {
       if (group.length === 1) {
-        this.moveOne(group[0], x, y);
+        if (this.moveOne(group[0], x, y) && group[0].order) group[0].order.maxSpeed = cap(group[0]);
         continue;
       }
       const first = group[0];
@@ -96,6 +103,7 @@ export class Movement {
           repaths: 0,
           bestRemaining: Infinity,
           noProgressTicks: 0,
+          maxSpeed: cap(u),
         };
       }
     }
@@ -123,6 +131,7 @@ export class Movement {
       repaths: 0,
       bestRemaining: Infinity,
       noProgressTicks: 0,
+      maxSpeed: 0,
     };
     return true;
   }
@@ -206,7 +215,8 @@ export class Movement {
   /** Tempo der Einheit auf ihrem aktuellen Gelände (Welteinheiten pro Tick). */
   private currentSpeed(u: Unit): number {
     const pct = this.map.speedAt(tileOf(u.x), tileOf(u.y), u.def.moveClassId);
-    return Math.max(1, Math.trunc((u.def.speedUnits * (pct > 0 ? pct : 100)) / 100));
+    const base = u.order?.maxSpeed ? Math.min(u.def.speedUnits, u.order.maxSpeed) : u.def.speedUnits;
+    return Math.max(1, Math.trunc((base * (pct > 0 ? pct : 100)) / 100));
   }
 
   /** Bestimmt den Punkt, auf den die Einheit in diesem Tick zusteuert. */

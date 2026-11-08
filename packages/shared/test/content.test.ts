@@ -19,10 +19,14 @@ function stepUntil(sim: Simulation, pred: () => boolean, max: number): number {
 }
 
 describe('Inhalt', () => {
-  it('jede Fraktion hat 5 Spezialeinheiten und 1 Spezialverteidigung, alles ist erreichbar', () => {
+  it('6 Teams; jedes hat eigene Spezialeinheiten (alle Bereiche) und 1 Spezialverteidigung, alles ist erreichbar', () => {
+    expect(FACTIONS).toHaveLength(6);
     for (const f of FACTIONS) {
-      const specials = rules.unitsOf(f).filter((u) => u.faction === f);
-      expect(specials, f).toHaveLength(5);
+      const specials = rules.unitsOf(f).filter((u) => u.faction === f && u.buildable);
+      // Aero und Granit: 5 klassische + 4 neue; die vier neuen Teams: je 6
+      expect(specials.length, f).toBe(f === 'aero' || f === 'granite' ? 9 : 6);
+      // Keine Spezialeinheit eines anderen Teams
+      for (const u of rules.unitsOf(f)) expect(u.faction === 'common' || u.faction === f, u.id).toBe(true);
       expect(new Set(specials.map((u) => u.category))).toEqual(new Set(['infantry', 'vehicle', 'air', 'naval']));
       const defenses = rules.buildingsOf(f).filter((b) => b.faction === f);
       expect(defenses, f).toHaveLength(1);

@@ -25,6 +25,8 @@ export interface MoveOrder {
   bestRemaining: number;
   /** Ticks seit der letzten echten Verbesserung des Restwegs. */
   noProgressTicks: number;
+  /** Höchsttempo (Welteinheiten/Tick), damit eine Gruppe zusammenbleibt; 0 = eigenes Tempo. */
+  maxSpeed: number;
 }
 
 /** Haltung: Angreifen (verfolgt Gegner), Stellung halten (schiesst, bleibt stehen), Passiv (schiesst nie von selbst). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveness, loadRules, strongAgainst } from '../src/data/rules';
+import { FACTIONS, effectiveness, loadRules, strongAgainst } from '../src/data/rules';
 import { damageFor } from '../src/sim/combat';
 import { GameMap } from '../src/map/gameMap';
 import { TILE, tileCenter } from '../src/math/fixed';
@@ -42,7 +42,7 @@ describe('Regeln', () => {
     expect(s('gunship')).not.toContain('air');
     expect(s('engineer')).toEqual([]);
     // Jede bewaffnete Einheit ist gegen irgendetwas stark, aber keine gegen alles
-    for (const f of ['aero', 'granite'] as const) {
+    for (const f of FACTIONS) {
       for (const u of rules.unitsOf(f)) {
         if (!u.weapon) continue;
         const list = strongAgainst(u);

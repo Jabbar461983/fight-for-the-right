@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { FACTIONS } from '../src/data/rules';
 import { loadData, rules } from './helpers';
 
 const de = loadData('i18n/de.json') as Record<string, string>;
@@ -38,7 +39,7 @@ describe('Texte (i18n)', () => {
   });
 
   it('alle Einheiten und Gebäude haben Namen', () => {
-    for (const f of ['aero', 'granite'] as const) {
+    for (const f of FACTIONS) {
       for (const d of [...rules.unitsOf(f), ...rules.buildingsOf(f)]) {
         expect(de[d.nameKey], d.nameKey).toBeTruthy();
         expect(en[d.nameKey], d.nameKey).toBeTruthy();
