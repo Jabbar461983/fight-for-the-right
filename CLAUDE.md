@@ -167,7 +167,16 @@ npm run maps         # Startkarten neu erzeugen
   Türme, Flächenschaden), Nebel mit Geistern, gemeinsame Bodeneinheiten beider Fraktionen (Aero billiger und
   schneller, Granit zäher), Ingenieur, Bauwagen, KI Leicht, Sieg/Niederlage/Aufgeben, Hauptmenü,
   Endstatistik. Getestet: komplette Partie gegen KI im Browser gewonnen; KI besiegt untätigen Gegner (Test).
-- **Etappe 6 – Feinschliff:** abgenommen (8.11.2026). Damit sind alle Etappen der ersten Version fertig. Leistung (Tempo-Raster für Komponenten/Flussfelder,
+- **Erweiterung 6 Teams (8.11.2026):** `FACTIONS` = aero, granite, volt (Volt-Kollektiv), corsair (Wolken-Freibeuter),
+  frost (Eis-Expedition), jungle (Dschungel-Ranger) – Reihenfolge ist Netzwerkformat, neue nur hinten anhängen.
+  Aero/Granit je 9 Spezialeinheiten (5 + Motorrad/Fallschirm-Flieger/Libellen-Kopter/Scharfschützin bzw.
+  Stahl-Roboter/Mörser-Trupp/Abriss-Bagger/Hagel-Flak), neue Teams je 6 + 1 Spezial-Abwehr (`data/units/<team>.json`).
+  Neue Regeln: `camouflage` (steht still + schiesst nicht → nur aus 2,5 Kacheln sichtbar, nutzt Feld `burrowed`),
+  Geschossart `arc` (Blitz), Fallschirm-Flieger = Luft-Transporter mit `initialPassengers`. Gruppen fahren im Tempo
+  der langsamsten Bodeneinheit (`MoveOrder.maxSpeed`). Grafik: `SLEEK` je Team (rund/kantig) + `TRIM`-Farben,
+  `HELI_SPRITES`/`BLIMP_SPRITES` in textures.ts, Wappen je Team in portraits.ts. Kampagne bleibt bei Aero/Granit.
+  KI-Rundenturnier (Mittel, 30 Partien): zähe Teams (Granit, Eis, Dschungel, Volt) gewinnen gegen KI häufiger als
+  die schnellen (Aero, Freibeuter) – die KI nutzt Tempo nicht aus; Feinabstimmung nach Rückmeldung aus echten Partien.- **Etappe 6 – Feinschliff:** abgenommen (8.11.2026). Damit sind alle Etappen der ersten Version fertig. Leistung (Tempo-Raster für Komponenten/Flussfelder,
   begrenzte Flussfelder, Minikarten-Nebel als Bild; gemessen 200 Einheiten: Simulation ≈ 1 ms/Tick, Bild ≈ 2,5 ms
   am PC), Ton und Musik, Bau-Animation/Rauch/Staub/Mündungsfeuer, Tutorial-Hinweise, Spielanleitung,
   Einstellungen (Lautstärke, weniger Effekte), Balancing (Duell-Tabelle: Schützen > Raketen > Panzer > Schützen;
