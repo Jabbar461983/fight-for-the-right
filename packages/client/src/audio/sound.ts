@@ -14,6 +14,7 @@ export type Sfx =
   | 'rocket'
   | 'flak'
   | 'bomb'
+  | 'zap'
   | 'boomSmall'
   | 'boomBig'
   | 'puff'
@@ -42,6 +43,7 @@ const LIMIT: Partial<Record<Sfx, [number, number]>> = {
   rocket: [3, 150],
   flak: [3, 150],
   bomb: [2, 200],
+  zap: [4, 150],
   boomSmall: [3, 150],
   boomBig: [2, 200],
   puff: [3, 150],
@@ -184,6 +186,11 @@ export function play(name: Sfx, vol = 1, pan = 0): void {
       break;
     case 'bomb':
       tone('sine', 1300 * v, 500, t, 0.45, 0.08, out, 0.05);
+      break;
+    case 'zap':
+      // Blitz: schnelles Sägezahn-Zirpen mit Knistern
+      tone('sawtooth', 1800 * v, 300, t, 0.12, 0.1, out);
+      noise(t, 0.1, 0.2, 'highpass', 4000 * v, out);
       break;
     case 'boomSmall':
       tone('sine', 110 * v, 40, t, 0.3, 0.5, out);

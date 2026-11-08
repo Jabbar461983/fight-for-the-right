@@ -6,6 +6,8 @@
  * - granite:    Kommandantin Berta Basalt (Granit-Union) – Stahlhelm mit Nieten, dunkler Zopf
  * - researcher: Dr. Ida Quarz – Brille, Kittel, Glimmerit-Anhänger
  */
+import type { Faction } from '@fftr/shared';
+
 export type PortraitKind = 'aero' | 'granite' | 'researcher';
 
 const cache = new Map<string, string>();
@@ -16,7 +18,7 @@ const OUTLINE = '#1d1a2b';
  * - Aero-Liga: weisse Flügel mit gelbem Blitz auf blauem Kreis
  * - Granit-Union: zwei Berggipfel in einem genieteten Schild auf Steingrau
  */
-export function emblem(faction: 'aero' | 'granite'): string {
+export function emblem(faction: Faction): string {
   const key = `emblem_${faction}`;
   const hit = cache.get(key);
   if (hit) return hit;
@@ -75,6 +77,8 @@ export function emblem(faction: 'aero' | 'granite'): string {
     g.fillStyle = '#ffd23f';
     g.fill();
     g.stroke();
+  } else if (faction !== 'granite') {
+    drawNewEmblem(g, faction, path);
   } else {
     // Steingrauer Hintergrund-Kreis
     g.beginPath();
@@ -129,6 +133,154 @@ export function emblem(faction: 'aero' | 'granite'): string {
   const url = c.toDataURL();
   cache.set(key, url);
   return url;
+}
+
+/**
+ * Wappen der vier neuen Teams:
+ * - Volt-Kollektiv: gelber Blitz in einer Kupferspule auf Violett
+ * - Wolken-Freibeuter: Steuerrad vor einer weissen Wolke auf Rot
+ * - Eis-Expedition: weisse Schneeflocke auf Eisblau
+ * - Dschungel-Ranger: grosses Blatt auf Dunkelgrün
+ */
+function drawNewEmblem(
+  g: CanvasRenderingContext2D,
+  faction: Faction,
+  path: (pts: [number, number][]) => void,
+): void {
+  const bg: Record<string, string> = { volt: '#5b2a9c', corsair: '#b03a2e', frost: '#5aa9e0', jungle: '#2f6b2a' };
+  g.beginPath();
+  g.arc(64, 64, 58, 0, Math.PI * 2);
+  g.fillStyle = bg[faction] ?? '#666';
+  g.fill();
+  g.lineWidth = 5;
+  g.strokeStyle = OUTLINE;
+  g.stroke();
+  g.lineWidth = 4;
+  if (faction === 'volt') {
+    // Kupferspule
+    for (let i = 0; i < 4; i++) {
+      g.beginPath();
+      g.ellipse(64, 40 + i * 16, 30 - i * 2, 7, 0, 0, Math.PI * 2);
+      g.strokeStyle = '#e0a35a';
+      g.lineWidth = 5;
+      g.stroke();
+    }
+    g.lineWidth = 4;
+    g.strokeStyle = OUTLINE;
+    path([
+      [72, 18],
+      [50, 66],
+      [64, 66],
+      [54, 110],
+      [82, 54],
+      [68, 54],
+    ]);
+    g.fillStyle = '#ffe14d';
+    g.fill();
+    g.stroke();
+  } else if (faction === 'corsair') {
+    // Wolke
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    for (const [x, y, r] of [
+      [40, 74, 18],
+      [62, 62, 24],
+      [86, 74, 18],
+      [64, 82, 20],
+    ]) {
+      g.moveTo(x + r, y);
+      g.arc(x, y, r, 0, Math.PI * 2);
+    }
+    g.fill();
+    // Steuerrad
+    g.strokeStyle = OUTLINE;
+    g.lineWidth = 4;
+    g.beginPath();
+    g.arc(64, 58, 22, 0, Math.PI * 2);
+    g.fillStyle = '#a8713f';
+    g.fill();
+    g.stroke();
+    g.beginPath();
+    g.arc(64, 58, 14, 0, Math.PI * 2);
+    g.fillStyle = '#b03a2e';
+    g.fill();
+    g.stroke();
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(64 + Math.cos(a) * 6, 58 + Math.sin(a) * 6);
+      g.lineTo(64 + Math.cos(a) * 30, 58 + Math.sin(a) * 30);
+      g.lineWidth = 5;
+      g.strokeStyle = OUTLINE;
+      g.stroke();
+      g.lineWidth = 2.5;
+      g.strokeStyle = '#e8d29a';
+      g.stroke();
+    }
+    g.beginPath();
+    g.arc(64, 58, 6, 0, Math.PI * 2);
+    g.fillStyle = '#ffd23f';
+    g.fill();
+    g.lineWidth = 3;
+    g.strokeStyle = OUTLINE;
+    g.stroke();
+  } else if (faction === 'frost') {
+    // Schneeflocke mit sechs Armen
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      const tip = (r: number) => [64 + Math.cos(a) * r, 64 + Math.sin(a) * r] as const;
+      g.lineCap = 'round';
+      for (const [w, col] of [
+        [10, OUTLINE],
+        [5, '#ffffff'],
+      ] as const) {
+        g.lineWidth = w;
+        g.strokeStyle = col;
+        g.beginPath();
+        g.moveTo(64, 64);
+        g.lineTo(...tip(42));
+        for (const r of [22, 32]) {
+          const [bx, by] = tip(r);
+          for (const s of [-1, 1]) {
+            g.moveTo(bx, by);
+            g.lineTo(bx + Math.cos(a + s * 0.8) * 10, by + Math.sin(a + s * 0.8) * 10);
+          }
+        }
+        g.stroke();
+      }
+    }
+    g.beginPath();
+    g.arc(64, 64, 8, 0, Math.PI * 2);
+    g.fillStyle = '#e8f6ff';
+    g.fill();
+    g.lineWidth = 3;
+    g.strokeStyle = OUTLINE;
+    g.stroke();
+  } else {
+    // Grosses Blatt mit Blattadern
+    g.beginPath();
+    g.moveTo(64, 16);
+    g.bezierCurveTo(108, 36, 104, 86, 64, 108);
+    g.bezierCurveTo(24, 86, 20, 36, 64, 16);
+    g.closePath();
+    g.fillStyle = '#7ac24a';
+    g.fill();
+    g.lineWidth = 4;
+    g.strokeStyle = OUTLINE;
+    g.stroke();
+    g.lineWidth = 3;
+    g.strokeStyle = '#2f6b2a';
+    g.beginPath();
+    g.moveTo(64, 24);
+    g.lineTo(64, 112);
+    for (const y of [42, 60, 78]) {
+      g.moveTo(64, y + 10);
+      g.lineTo(46, y);
+      g.moveTo(64, y + 10);
+      g.lineTo(82, y);
+    }
+    g.stroke();
+  }
 }
 
 export function portrait(kind: PortraitKind, mood: 'normal' | 'angry' = 'normal'): string {

@@ -6,6 +6,8 @@ import type { BuildingDef, Faction, UnitDef } from '@fftr/shared';
  * Stil: Retro-Futurismus im Comic-Look – dunkle Kontur, kräftige Farben, Lichtkanten.
  *  - Aero-Liga: rund, Chrom-Zierleisten, Heckflossen, Glaskuppeln
  *  - Granit-Union: kantig, Messingplatten, Nieten, Dampfrohre
+ *  - Volt-Kollektiv (rund, gelb/violett, Spulen), Wolken-Freibeuter (kantig, Holz/Messing, Segel),
+ *    Eis-Expedition (kantig, eisweiss, Kufen), Dschungel-Ranger (rund, Blätter und Lianen)
  * Die Spielerfarbe ist immer die Hauptfarbe, damit man Freund und Feind sofort erkennt.
  * In Etappe 6 durch echte Sprites ersetzbar – die Texture-Keys bleiben gleich.
  */
@@ -24,7 +26,15 @@ export const NEUTRAL_COLOR = 0x9a9aa8;
 const TRIM: Record<Faction, { trim: string; dark: string; accent: string }> = {
   aero: { trim: '#e9f1f7', dark: '#2b4a66', accent: '#9fd8ff' },
   granite: { trim: '#c9a04c', dark: '#4a3b22', accent: '#e0c27a' },
+  volt: { trim: '#ffe14d', dark: '#3b2a5c', accent: '#c9a8ff' },
+  corsair: { trim: '#a8713f', dark: '#4a2a1c', accent: '#e8d29a' },
+  frost: { trim: '#e8f6ff', dark: '#2a4a6a', accent: '#9fd8ff' },
+  jungle: { trim: '#7aa83f', dark: '#2a3a1c', accent: '#c9e07a' },
 };
+
+/** Formensprache: rund mit Chromleisten (true) oder kantig mit Nieten (false). */
+const SLEEK: Record<Faction, boolean> = { aero: true, granite: false, volt: true, corsair: false, frost: false, jungle: true };
+const sleek = (faction: Faction) => SLEEK[faction];
 
 // ───────────── Hilfen ─────────────
 
@@ -114,8 +124,48 @@ function drawInfantry(color: number, faction: Faction, kind: string): HTMLCanvas
     highlight(ctx, cx - 1, cy - 2.5, 1.8);
     return c;
   }
-  // Rucksack
-  if (faction === 'aero') {
+  if (kind === 'sparkBot') {
+    // Funken-Roboter: eckiger Körper, Kopf mit Sehschlitz, Antenne mit Funken
+    rr(ctx, cx - 9, cy - 10, 16, 20, 3);
+    fillStroke(ctx, rgb(color), 2.2);
+    rr(ctx, cx - 2, cy - 6, 9, 12, 3);
+    fillStroke(ctx, f.trim, 2);
+    ctx.fillStyle = '#9b5de5';
+    ctx.fillRect(cx + 4, cy - 3, 2, 6);
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy - 10);
+    ctx.lineTo(cx - 9, cy - 16);
+    ctx.stroke();
+    circle(ctx, cx - 9, cy - 17, 2.4);
+    fillStroke(ctx, '#fffbd0', 1.5);
+    rr(ctx, cx + 6, cy + 4, 12, 4, 2);
+    fillStroke(ctx, f.trim, 1.8);
+    return c;
+  }
+  // Rucksack (Fallschirmjäger: dicker Schirmpack)
+  if (kind === 'paratrooper') {
+    rr(ctx, cx - 15, cy - 8, 11, 16, 4);
+    fillStroke(ctx, '#e8483b', 2);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 15, cy);
+    ctx.lineTo(cx - 4, cy);
+    ctx.stroke();
+  } else if (kind === 'camo') {
+    // Tarnumhang aus Blättern
+    for (const [dx, dy, r] of [
+      [-10, -6, 6],
+      [-11, 5, 6],
+      [-4, -10, 5],
+      [-4, 10, 5],
+    ] as const) {
+      circle(ctx, cx + dx, cy + dy, r);
+      fillStroke(ctx, dx % 2 ? '#4f8a2e' : '#6bb33f', 1.5);
+    }
+  } else if (sleek(faction)) {
     rr(ctx, cx - 13, cy - 7, 9, 14, 5);
     fillStroke(ctx, f.trim, 2);
     ctx.fillStyle = '#ff9d3b';
@@ -156,7 +206,7 @@ function drawInfantry(color: number, faction: Faction, kind: string): HTMLCanvas
     ]);
   } else if (kind === 'rocket') {
     rr(ctx, cx - 6, cy - 13, 24, 6, 3);
-    fillStroke(ctx, faction === 'aero' ? '#c6d4de' : '#6b7a4a', 2);
+    fillStroke(ctx, sleek(faction) ? '#c6d4de' : '#6b7a4a', 2);
     ctx.fillStyle = '#e8483b';
     ctx.fillRect(cx + 15, cy - 12, 3, 4);
   } else if (kind === 'engineer') {
@@ -164,6 +214,57 @@ function drawInfantry(color: number, faction: Faction, kind: string): HTMLCanvas
     fillStroke(ctx, '#9aa0aa', 2);
     circle(ctx, cx + 16, cy + 5, 3);
     fillStroke(ctx, '#9aa0aa', 1.5);
+  } else if (kind === 'sniper') {
+    // Langes Gewehr mit Zielfernrohr
+    rr(ctx, cx - 2, cy + 2, 26, 3.5, 1.5);
+    fillStroke(ctx, '#3a3a46', 1.8);
+    rr(ctx, cx + 4, cy - 1.5, 8, 3, 1.5);
+    fillStroke(ctx, f.trim, 1.5);
+  } else if (kind === 'mortar') {
+    // Mörserrohr über der Schulter, Bodenplatte auf dem Rücken
+    rr(ctx, cx - 4, cy - 12, 20, 6, 2);
+    fillStroke(ctx, '#5a5a66', 2);
+    circle(ctx, cx - 10, cy + 6, 5);
+    fillStroke(ctx, f.trim, 1.8);
+  } else if (kind === 'boarder') {
+    // Entersäbel
+    ctx.strokeStyle = '#e9f1f7';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx + 4, cy + 4);
+    ctx.quadraticCurveTo(cx + 16, cy + 6, cx + 20, cy - 2);
+    ctx.stroke();
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    circle(ctx, cx + 4, cy + 4, 2.5);
+    fillStroke(ctx, '#ffd23f', 1.2);
+  } else if (kind === 'harpoon') {
+    rr(ctx, cx - 4, cy - 12, 22, 5, 2);
+    fillStroke(ctx, '#a8713f', 2);
+    ctx.beginPath();
+    ctx.moveTo(cx + 18, cy - 14);
+    ctx.lineTo(cx + 24, cy - 9.5);
+    ctx.lineTo(cx + 18, cy - 5);
+    ctx.closePath();
+    fillStroke(ctx, '#d4dde5', 1.5);
+  } else if (kind === 'snowball') {
+    // Riesiger Schneeball in der Hand
+    circle(ctx, cx + 12, cy + 6, 5.5);
+    fillStroke(ctx, '#ffffff', 2);
+    highlight(ctx, cx + 10, cy + 4, 1.5);
+  } else if (kind === 'dart') {
+    // Blasrohr aus Bambus
+    rr(ctx, cx - 2, cy - 1, 24, 3.5, 1.5);
+    fillStroke(ctx, '#c9b27a', 1.8);
+    for (const x of [cx + 6, cx + 14]) {
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, cy - 1);
+      ctx.lineTo(x, cy + 2.5);
+      ctx.stroke();
+    }
   } else {
     rr(ctx, cx, cy + 2, 18, 4, 1.5);
     fillStroke(ctx, '#3a3a46', 2);
@@ -172,11 +273,33 @@ function drawInfantry(color: number, faction: Faction, kind: string): HTMLCanvas
   ctx.beginPath();
   ctx.ellipse(cx, cy, 7, 10, 0, 0, Math.PI * 2);
   fillStroke(ctx, rgb(color), 2);
-  // Helm
+  // Helm / Kopfbedeckung
   if (kind === 'engineer') {
     circle(ctx, cx + 1, cy, 6);
     fillStroke(ctx, '#ffd23f', 2);
-  } else if (faction === 'aero') {
+  } else if (kind === 'boarder' || (faction === 'corsair' && kind !== 'camo')) {
+    // Kopftuch mit Knoten
+    circle(ctx, cx + 1, cy, 5.5);
+    fillStroke(ctx, '#e8483b', 2);
+    circle(ctx, cx - 5, cy + 3, 2);
+    fillStroke(ctx, '#e8483b', 1.2);
+    ctx.fillStyle = '#ffffff';
+    circle(ctx, cx + 2, cy - 2, 1);
+    ctx.fill();
+  } else if (faction === 'frost') {
+    // Pelzmütze
+    circle(ctx, cx + 1, cy, 6.5);
+    fillStroke(ctx, '#f4f4f0', 2);
+    circle(ctx, cx + 1, cy, 3);
+    fillStroke(ctx, rgb(color, 0.8), 1.2);
+  } else if (kind === 'camo' || faction === 'jungle') {
+    // Buschhut
+    ctx.beginPath();
+    ctx.ellipse(cx + 1, cy, 7.5, 7, 0, 0, Math.PI * 2);
+    fillStroke(ctx, '#8a7a4a', 2);
+    circle(ctx, cx + 1, cy, 3.6);
+    fillStroke(ctx, '#6b5a32', 1.2);
+  } else if (sleek(faction)) {
     circle(ctx, cx + 1, cy, 5.5);
     fillStroke(ctx, f.trim, 2);
     ctx.fillStyle = 'rgba(120,200,255,0.9)';
@@ -195,13 +318,13 @@ function drawInfantry(color: number, faction: Faction, kind: string): HTMLCanvas
 
 /** Wanne mit Ketten. kind: tank | flak | artillery | harvester | wagon */
 function drawVehicle(color: number, faction: Faction, kind: string): HTMLCanvasElement {
-  const big = kind === 'harvester' || kind === 'wagon';
+  const big = kind === 'harvester' || kind === 'wagon' || kind === 'snowTank' || kind === 'wrecker';
   const [c, ctx] = canvas(80, 80);
   const cx = 40;
   const cy = 40;
   const f = TRIM[faction];
-  const hl = big ? 28 : kind === 'artillery' ? 26 : 23;
-  const hw = big ? 14 : 12;
+  const hl = big ? 28 : kind === 'artillery' || kind === 'catapult' ? 26 : 23;
+  const hw = big ? (kind === 'snowTank' ? 16 : 14) : 12;
   shadow(ctx, cx, cy, hl + 2, hw + 8);
   if (kind === 'hover') {
     // Schwebeschürze statt Ketten, mit Luftpolster-Glühen
@@ -215,7 +338,7 @@ function drawVehicle(color: number, faction: Faction, kind: string): HTMLCanvasE
   }
   // Ketten
   for (const sy of kind === 'hover' ? [] : [-1, 1]) {
-    rr(ctx, cx - hl - 2, cy + sy * (hw + 2) - 6, hl * 2 + 4, 12, faction === 'aero' ? 6 : 2);
+    rr(ctx, cx - hl - 2, cy + sy * (hw + 2) - 6, hl * 2 + 4, 12, sleek(faction) ? 6 : 2);
     fillStroke(ctx, '#3a3a46', 2.5);
     ctx.strokeStyle = '#5c5c6c';
     ctx.lineWidth = 1.5;
@@ -227,7 +350,7 @@ function drawVehicle(color: number, faction: Faction, kind: string): HTMLCanvasE
     }
   }
   // Wanne
-  if (faction === 'aero') {
+  if (sleek(faction)) {
     rr(ctx, cx - hl, cy - hw, hl * 2, hw * 2, [hw, hw * 1.2, hw * 1.2, hw]);
     fillStroke(ctx, rgb(color));
     // Chromleiste
@@ -338,7 +461,228 @@ function drawVehicle(color: number, faction: Faction, kind: string): HTMLCanvasE
     ctx.fillStyle = 'rgba(120,200,255,0.9)';
     rr(ctx, cx + 20, cy - 6, 4, 12, 2);
     ctx.fill();
+  } else if (kind === 'wrecker') {
+    // Ausleger mit Abrissbirne vorne
+    rr(ctx, cx - 10, cy - 4, 40, 8, 3);
+    fillStroke(ctx, '#ffd23f', 2);
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + 28, cy);
+    ctx.lineTo(cx + 34, cy);
+    ctx.stroke();
+    circle(ctx, cx + 34, cy, 8);
+    fillStroke(ctx, '#3a3a46', 2.5);
+    highlight(ctx, cx + 31, cy - 3, 2.5);
+    rr(ctx, cx - 18, cy - 9, 14, 18, 3);
+    fillStroke(ctx, f.trim, 2);
+  } else if (kind === 'liana') {
+    // Lianen und Blätter als Tarnung
+    ctx.strokeStyle = '#3f6b22';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - hl + 4, cy - hw + 2);
+    ctx.bezierCurveTo(cx - 6, cy + hw, cx + 6, cy - hw, cx + hl - 6, cy + hw - 2);
+    ctx.stroke();
+    for (const [dx, dy] of [
+      [-16, -9],
+      [-4, 8],
+      [10, -8],
+      [16, 9],
+    ]) {
+      ctx.beginPath();
+      ctx.ellipse(cx + dx, cy + dy, 5, 3, dx * 0.1, 0, Math.PI * 2);
+      fillStroke(ctx, '#6bb33f', 1.5);
+    }
+  } else if (kind === 'catapult') {
+    // Wurfarm mit Kokosnuss-Korb
+    rr(ctx, cx - 18, cy - 3, 34, 6, 3);
+    fillStroke(ctx, '#a8713f', 2);
+    circle(ctx, cx - 6, cy, 4);
+    fillStroke(ctx, '#5a5a66', 1.5);
+    circle(ctx, cx + 18, cy, 7);
+    fillStroke(ctx, '#8a5a35', 2);
+    circle(ctx, cx + 18, cy, 4);
+    fillStroke(ctx, '#6b4423', 1.5);
   }
+  return c;
+}
+
+/** Motorrad (Aero) oder Schneemobil (Eis): schmal, Fahrer mit Helm. */
+function drawBike(color: number, faction: Faction, snow: boolean): HTMLCanvasElement {
+  const [c, ctx] = canvas(64, 64);
+  const cx = 32;
+  const cy = 32;
+  const f = TRIM[faction];
+  shadow(ctx, cx, cy, 20, 9);
+  if (snow) {
+    // Zwei Kufen und Raupe hinten
+    for (const s of [-1, 1]) {
+      rr(ctx, cx - 4, cy + s * 9 - 2, 26, 4, 2);
+      fillStroke(ctx, '#d4dde5', 1.8);
+    }
+    rr(ctx, cx - 20, cy - 6, 14, 12, 3);
+    fillStroke(ctx, '#3a3a46', 2);
+  } else {
+    // Zwei Räder
+    for (const x of [cx - 15, cx + 15]) {
+      rr(ctx, x - 6, cy - 3, 12, 6, 3);
+      fillStroke(ctx, '#2e2e3a', 2);
+    }
+  }
+  // Rumpf
+  rr(ctx, cx - 16, cy - 5, 32, 10, 5);
+  fillStroke(ctx, rgb(color), 2.2);
+  rr(ctx, cx + 8, cy - 7, 8, 14, 3);
+  fillStroke(ctx, f.trim, 1.8);
+  // Fahrer
+  circle(ctx, cx - 2, cy, 6);
+  fillStroke(ctx, f.trim, 2);
+  ctx.fillStyle = 'rgba(120,200,255,0.9)';
+  circle(ctx, cx + 1, cy, 2.5);
+  ctx.fill();
+  if (!snow) {
+    // Düsenflamme hinten
+    ctx.fillStyle = '#ffb02e';
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, cy - 3);
+    ctx.lineTo(cx - 25, cy);
+    ctx.lineTo(cx - 16, cy + 3);
+    ctx.closePath();
+    ctx.fill();
+  }
+  return c;
+}
+
+/** Kanonen-Buggy: offener Rahmen auf vier grossen Rädern, kleine Kanone vorne. */
+function drawBuggy(color: number, faction: Faction): HTMLCanvasElement {
+  const [c, ctx] = canvas(72, 72);
+  const cx = 36;
+  const cy = 36;
+  const f = TRIM[faction];
+  shadow(ctx, cx, cy, 22, 16);
+  for (const [dx, dy] of [
+    [-14, -13],
+    [14, -13],
+    [-14, 13],
+    [14, 13],
+  ]) {
+    rr(ctx, cx + dx - 7, cy + dy - 4, 14, 8, 4);
+    fillStroke(ctx, '#2e2e3a', 2);
+  }
+  rr(ctx, cx - 18, cy - 10, 34, 20, 4);
+  fillStroke(ctx, rgb(color), 2.5);
+  ctx.strokeStyle = f.trim;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx - 12, cy - 7, 18, 14);
+  rr(ctx, cx + 8, cy - 3, 20, 6, 2);
+  fillStroke(ctx, '#5a5a66', 2);
+  circle(ctx, cx - 3, cy, 5);
+  fillStroke(ctx, '#e8483b', 2);
+  return c;
+}
+
+/** Schwirr-Drohne: vier kleine Rotoren um eine leuchtende Kapsel. */
+function drawDrone(color: number, faction: Faction): HTMLCanvasElement {
+  const [c, ctx] = canvas(56, 56);
+  const cx = 28;
+  const cy = 28;
+  const f = TRIM[faction];
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, cy - 14);
+  ctx.lineTo(cx + 14, cy + 14);
+  ctx.moveTo(cx + 14, cy - 14);
+  ctx.lineTo(cx - 14, cy + 14);
+  ctx.stroke();
+  for (const [dx, dy] of [
+    [-14, -14],
+    [14, -14],
+    [-14, 14],
+    [14, 14],
+  ]) {
+    circle(ctx, cx + dx, cy + dy, 7);
+    ctx.fillStyle = 'rgba(60,60,80,0.45)';
+    ctx.fill();
+    circle(ctx, cx + dx, cy + dy, 2.5);
+    fillStroke(ctx, f.trim, 1.2);
+  }
+  circle(ctx, cx, cy, 8);
+  fillStroke(ctx, rgb(color), 2.2);
+  circle(ctx, cx + 2, cy, 3.5);
+  fillStroke(ctx, '#fffbd0', 1.2);
+  return c;
+}
+
+/** Flugzeuge mit geraden Flügeln: Fallschirm-Flieger (Transport) oder Segelgleiter. */
+function drawPlane(color: number, faction: Faction, kind: 'para' | 'glider'): HTMLCanvasElement {
+  const [c, ctx] = canvas(96, 96);
+  const cx = 48;
+  const cy = 48;
+  const f = TRIM[faction];
+  const span = kind === 'para' ? 40 : 44;
+  const chord = kind === 'para' ? 12 : 7;
+  // Flügel
+  rr(ctx, cx - 2, cy - span, chord, span * 2, chord / 2);
+  fillStroke(ctx, kind === 'glider' ? '#efe3c8' : rgb(color), 2.5);
+  // Leitwerk
+  rr(ctx, cx - 34, cy - 14, 7, 28, 3);
+  fillStroke(ctx, f.trim, 2);
+  // Rumpf
+  rr(ctx, cx - 36, cy - (kind === 'para' ? 9 : 5), 70, kind === 'para' ? 18 : 10, kind === 'para' ? 9 : 5);
+  fillStroke(ctx, rgb(color), 2.5);
+  ctx.fillStyle = 'rgba(140,210,255,0.9)';
+  rr(ctx, cx + 20, cy - 4, 10, 8, 4);
+  ctx.fill();
+  if (kind === 'para') {
+    // Ladeluke mit gelben Streifen
+    rr(ctx, cx - 30, cy - 5, 10, 10, 2);
+    fillStroke(ctx, '#ffd23f', 1.5);
+    // Propeller
+    for (const s of [-1, 1]) {
+      circle(ctx, cx + 4, cy + s * 24, 4);
+      fillStroke(ctx, '#5a5a66', 1.5);
+    }
+  } else {
+    // Segel-Streifen
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 2;
+    for (const y of [-30, -15, 15, 30]) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + y);
+      ctx.lineTo(cx + chord - 2, cy + y);
+      ctx.stroke();
+    }
+  }
+  return c;
+}
+
+/** Stahl-Roboter: Körper mit Visier auf zwei Beinen, MG-Arm. */
+function drawRobot(color: number, faction: Faction): HTMLCanvasElement {
+  const [c, ctx] = canvas(80, 80);
+  const cx = 40;
+  const cy = 40;
+  const f = TRIM[faction];
+  shadow(ctx, cx, cy, 22, 20);
+  for (const s of [-1, 1]) {
+    rr(ctx, cx - 12, cy + s * 14 - 5, 24, 10, 4);
+    fillStroke(ctx, '#5a5a66', 2);
+  }
+  rr(ctx, cx - 16, cy - 16, 30, 32, 5);
+  fillStroke(ctx, rgb(color), 3);
+  rivets(ctx, [
+    [cx - 12, cy - 12],
+    [cx - 12, cy + 12],
+  ]);
+  // Kopf mit Visier
+  rr(ctx, cx - 2, cy - 9, 14, 18, 4);
+  fillStroke(ctx, f.trim, 2);
+  ctx.fillStyle = '#e8483b';
+  ctx.fillRect(cx + 6, cy - 6, 3, 12);
+  // MG-Arm
+  rr(ctx, cx + 4, cy + 12, 22, 5, 2);
+  fillStroke(ctx, '#3a3a46', 2);
   return c;
 }
 
@@ -350,9 +694,9 @@ function drawTurret(color: number, faction: Faction, kind: string): HTMLCanvasEl
   const f = TRIM[faction];
   const barrel = (y: number, len: number, w: number) => {
     rr(ctx, cx, y - w / 2, len, w, 2);
-    fillStroke(ctx, faction === 'aero' ? '#c6d4de' : '#5a5a66', 2);
+    fillStroke(ctx, sleek(faction) ? '#c6d4de' : '#5a5a66', 2);
     rr(ctx, cx + len - 5, y - w / 2 - 1.5, 6, w + 3, 2);
-    fillStroke(ctx, faction === 'aero' ? '#e9f1f7' : f.trim, 2);
+    fillStroke(ctx, sleek(faction) ? '#e9f1f7' : f.trim, 2);
   };
   if (kind === 'flak' || kind === 'flakPosition') {
     barrel(cy - 4, 22, 4);
@@ -368,7 +712,7 @@ function drawTurret(color: number, faction: Faction, kind: string): HTMLCanvasEl
   } else if (kind === 'rocketBattery') {
     // Raketenwerfer-Gestell mit sechs Rohren
     rr(ctx, cx - 6, cy - 14, 26, 28, 3);
-    fillStroke(ctx, faction === 'aero' ? '#c6d4de' : '#6b7a4a', 2.5);
+    fillStroke(ctx, sleek(faction) ? '#c6d4de' : '#6b7a4a', 2.5);
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 2; j++) {
         circle(ctx, cx + 4 + j * 9, cy - 8 + i * 8, 3);
@@ -376,6 +720,50 @@ function drawTurret(color: number, faction: Faction, kind: string): HTMLCanvasEl
       }
     }
     return c;
+  } else if (kind === 'tesla' || kind === 'teslaCoil') {
+    // Spule mit Kupferringen und leuchtender Kugel
+    const big = kind === 'teslaCoil';
+    rr(ctx, cx, cy - 4, big ? 18 : 22, 8, 3);
+    fillStroke(ctx, '#c98a3a', 2);
+    for (let i = 0; i < 3; i++) {
+      rr(ctx, cx + 3 + i * 5, cy - 6, 3, 12, 1.5);
+      fillStroke(ctx, '#e0a35a', 1.2);
+    }
+    circle(ctx, cx + (big ? 0 : 24), cy, big ? 9 : 5);
+    fillStroke(ctx, '#fffbd0', 2);
+    ctx.fillStyle = 'rgba(200,160,255,0.5)';
+    circle(ctx, cx + (big ? 0 : 24), cy, big ? 14 : 8);
+    ctx.fill();
+    if (big) return c;
+  } else if (kind === 'arc') {
+    barrel(cy, 34, 5);
+    for (let i = 0; i < 4; i++) {
+      circle(ctx, cx + 8 + i * 6, cy, 4);
+      fillStroke(ctx, '#e0a35a', 1.2);
+    }
+  } else if (kind === 'frost' || kind === 'frostTower') {
+    // Eiskanone: hellblaues Rohr mit Kristallspitze
+    rr(ctx, cx, cy - 4, 26, 8, 3);
+    fillStroke(ctx, '#9fd8ff', 2);
+    ctx.beginPath();
+    ctx.moveTo(cx + 26, cy - 6);
+    ctx.lineTo(cx + 34, cy);
+    ctx.lineTo(cx + 26, cy + 6);
+    ctx.closePath();
+    fillStroke(ctx, '#e8f6ff', 1.8);
+  } else if (kind === 'treehouse') {
+    // Zwei Blasrohre aus dem Blätterdach
+    barrel(cy - 4, 20, 3.5);
+    barrel(cy + 4, 20, 3.5);
+    circle(ctx, cx, cy, 13);
+    fillStroke(ctx, '#4f8a2e', 2.5);
+    circle(ctx, cx - 4, cy - 4, 6);
+    fillStroke(ctx, '#6bb33f', 1.5);
+    circle(ctx, cx + 4, cy + 4, 5);
+    fillStroke(ctx, '#6bb33f', 1.5);
+    return c;
+  } else if (kind === 'lookoutTower') {
+    barrel(cy, 28, 7);
   } else if (kind === 'artillery') {
     barrel(cy, 36, 6);
   } else if (kind === 'mgTower') {
@@ -387,7 +775,7 @@ function drawTurret(color: number, faction: Faction, kind: string): HTMLCanvasEl
     barrel(cy, 25, 6);
   }
   const r = kind === 'artillery' ? 9 : kind === 'cannonTower' ? 13 : 11;
-  if (faction === 'aero') {
+  if (sleek(faction)) {
     circle(ctx, cx, cy, r);
     fillStroke(ctx, rgb(color, 1.1));
     ctx.fillStyle = 'rgba(140,210,255,0.85)';
@@ -506,8 +894,8 @@ function drawJet(color: number, faction: Faction): HTMLCanvasElement {
   return c;
 }
 
-/** Luftschiff: Zeppelin (mit Radarschüssel) oder Bomben-Luftschiff (mit Gondel). */
-function drawBlimp(color: number, faction: Faction, radar: boolean): HTMLCanvasElement {
+/** Luftschiffe: Radar-Zeppelin, Bomben-Luftschiff, Gewitter-Zeppelin (Volt), Kaper-Luftschiff (Freibeuter). */
+function drawBlimp(color: number, faction: Faction, kind: 'radar' | 'bomb' | 'storm' | 'privateer'): HTMLCanvasElement {
   const [c, ctx] = canvas(112, 80);
   const cx = 56;
   const cy = 40;
@@ -534,7 +922,34 @@ function drawBlimp(color: number, faction: Faction, radar: boolean): HTMLCanvasE
     ctx.stroke();
   }
   highlight(ctx, cx + 10, cy - 9, 6);
-  if (radar) {
+  if (kind === 'storm') {
+    // Blitzableiter-Spulen und Gewitterwolke
+    for (const x of [-16, 0, 16]) {
+      circle(ctx, cx + x, cy, 5);
+      fillStroke(ctx, '#e0a35a', 1.8);
+      circle(ctx, cx + x, cy, 2);
+      fillStroke(ctx, '#fffbd0', 1);
+    }
+    return c;
+  }
+  if (kind === 'privateer') {
+    // Zwei Segel und Kanonen an beiden Seiten
+    for (const x of [-14, 12]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + x, cy - 16);
+      ctx.quadraticCurveTo(cx + x + 10, cy, cx + x, cy + 16);
+      ctx.closePath();
+      fillStroke(ctx, '#efe3c8', 2);
+    }
+    for (const s of [-1, 1]) {
+      for (const x of [-10, 4]) {
+        rr(ctx, cx + x, cy + s * 18 - 2, 8, 4, 2);
+        fillStroke(ctx, '#3a3a46', 1.5);
+      }
+    }
+    return c;
+  }
+  if (kind === 'radar') {
     ctx.beginPath();
     ctx.ellipse(cx, cy, 9, 12, 0, 0, Math.PI * 2);
     fillStroke(ctx, f.trim, 2);
@@ -555,14 +970,14 @@ function drawBlimp(color: number, faction: Faction, radar: boolean): HTMLCanvasE
   return c;
 }
 
-/** Schiffe: patrol | transport | missile | cruiser */
+/** Schiffe: patrol | transport | missile | cruiser | volt | frigate | icebreaker | raft */
 function drawBoat(color: number, faction: Faction, kind: string): HTMLCanvasElement {
-  const big = kind === 'cruiser';
+  const big = kind === 'cruiser' || kind === 'frigate' || kind === 'icebreaker';
   const [c, ctx] = canvas(big ? 120 : 96, 80);
   const cx = big ? 60 : 48;
   const cy = 40;
-  const hl = big ? 46 : kind === 'transport' ? 32 : 34;
-  const hw = big ? 17 : kind === 'transport' ? 17 : 12;
+  const hl = big ? 46 : kind === 'transport' || kind === 'raft' ? 32 : 34;
+  const hw = big ? 17 : kind === 'transport' || kind === 'raft' ? 17 : 12;
   const f = TRIM[faction];
   // Bugwelle
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
@@ -571,7 +986,7 @@ function drawBoat(color: number, faction: Faction, kind: string): HTMLCanvasElem
   ctx.fill();
   // Rumpf
   ctx.beginPath();
-  if (kind === 'transport') {
+  if (kind === 'transport' || kind === 'raft') {
     ctx.roundRect(cx - hl, cy - hw, hl * 2, hw * 2, 6);
   } else {
     ctx.moveTo(cx + hl, cy);
@@ -582,11 +997,37 @@ function drawBoat(color: number, faction: Faction, kind: string): HTMLCanvasElem
     ctx.quadraticCurveTo(cx + hl * 0.4, cy + hw, cx + hl, cy);
     ctx.closePath();
   }
-  fillStroke(ctx, rgb(color), 3);
+  fillStroke(ctx, kind === 'raft' ? '#a8713f' : rgb(color), 3);
+  if (kind === 'raft') {
+    // Baumstämme, Spielerfarbe als Fahne
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 1.5;
+    for (let y = cy - hw + 6; y < cy + hw; y += 6) {
+      ctx.beginPath();
+      ctx.moveTo(cx - hl + 3, y);
+      ctx.lineTo(cx + hl - 3, y);
+      ctx.stroke();
+    }
+    rr(ctx, cx - 6, cy - 8, 16, 16, 3);
+    fillStroke(ctx, rgb(color), 2);
+    ctx.beginPath();
+    ctx.ellipse(cx - 18, cy, 7, 4, 0, 0, Math.PI * 2);
+    fillStroke(ctx, '#6bb33f', 1.5);
+    return c;
+  }
+  if (kind === 'icebreaker') {
+    // Eisbrecher-Bug (weisser Keil)
+    ctx.beginPath();
+    ctx.moveTo(cx + hl + 4, cy);
+    ctx.lineTo(cx + hl - 14, cy - hw + 3);
+    ctx.lineTo(cx + hl - 14, cy + hw - 3);
+    ctx.closePath();
+    fillStroke(ctx, '#e8f6ff', 2);
+  }
   // Deck
   ctx.beginPath();
   ctx.roundRect(cx - hl * 0.7, cy - hw * 0.6, hl * 1.2, hw * 1.2, 4);
-  fillStroke(ctx, faction === 'aero' ? '#e9f1f7' : '#b9a27a', 2);
+  fillStroke(ctx, sleek(faction) ? '#e9f1f7' : '#b9a27a', 2);
   if (kind === 'transport') {
     // Laderampe vorne
     rr(ctx, cx + hl - 10, cy - hw + 3, 8, hw * 2 - 6, 2);
@@ -597,6 +1038,28 @@ function drawBoat(color: number, faction: Faction, kind: string): HTMLCanvasElem
       fillStroke(ctx, '#e9f1f7', 1.5);
       ctx.fillStyle = '#e8483b';
       ctx.fillRect(cx + 6, cy + s * 5 - 2, 3, 4);
+    }
+  } else if (kind === 'volt') {
+    for (const x of [-12, 4]) {
+      circle(ctx, cx + x, cy, 5);
+      fillStroke(ctx, '#e0a35a', 1.8);
+      circle(ctx, cx + x, cy, 2);
+      fillStroke(ctx, '#fffbd0', 1);
+    }
+  } else if (kind === 'frigate') {
+    // Drei Masten mit Segeln, Kanonenluken an den Seiten
+    for (const x of [-22, -4, 14]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + x, cy - 15);
+      ctx.quadraticCurveTo(cx + x + 9, cy, cx + x, cy + 15);
+      ctx.closePath();
+      fillStroke(ctx, '#efe3c8', 2);
+    }
+    for (const s of [-1, 1]) {
+      for (const x of [-26, -12, 2, 16]) {
+        ctx.fillStyle = OUTLINE;
+        ctx.fillRect(cx + x, cy + s * (hw - 3) - 1.5, 5, 3);
+      }
     }
   } else if (kind === 'cruiser') {
     for (const x of [-20, -6]) {
@@ -691,7 +1154,19 @@ const TURRET_KIND: Record<string, string> = {
   colossus: 'twin',
   steamCruiser: 'cruiser',
   patrolBoat: 'boat',
+  hailFlak: 'flak',
+  teslaTank: 'tesla',
+  arcCannon: 'arc',
+  frostCannon: 'frost',
+  snowTank: 'twin',
+  icebreaker: 'cruiser',
+  lianaTank: 'tank',
 };
+
+/** Hubschrauber (bekommen im Spiel einen drehenden Rotor). */
+export const HELI_SPRITES = new Set(['gunship', 'transportHeli', 'dragonfly', 'iceCopter', 'gyrocopter']);
+/** Luftschiffe (fliegen höher und schaukeln). */
+export const BLIMP_SPRITES = new Set(['radarZeppelin', 'bomberAirship', 'stormBlimp', 'privateer']);
 
 function unitCanvas(def: UnitDef, faction: Faction, color: number, part: 'body' | 'turret'): HTMLCanvasElement {
   if (part === 'turret') return drawTurret(color, faction, TURRET_KIND[def.sprite] ?? 'tank');
@@ -715,9 +1190,13 @@ function unitCanvas(def: UnitDef, faction: Faction, color: number, part: 'body' 
     case 'cometFighter':
       return drawJet(color, faction);
     case 'radarZeppelin':
-      return drawBlimp(color, faction, true);
+      return drawBlimp(color, faction, 'radar');
     case 'bomberAirship':
-      return drawBlimp(color, faction, false);
+      return drawBlimp(color, faction, 'bomb');
+    case 'stormBlimp':
+      return drawBlimp(color, faction, 'storm');
+    case 'privateer':
+      return drawBlimp(color, faction, 'privateer');
     case 'patrolBoat':
       return drawBoat(color, faction, 'patrol');
     case 'transportBoat':
@@ -739,7 +1218,62 @@ function unitCanvas(def: UnitDef, faction: Faction, color: number, part: 'body' 
     case 'artillery':
       return drawVehicle(color, faction, 'artillery');
     case 'flakWagon':
+    case 'hailFlak':
       return drawVehicle(color, faction, 'flak');
+    // Neue Infanterie
+    case 'sniper':
+    case 'paratrooper':
+    case 'mortar':
+    case 'sparkBot':
+    case 'boarder':
+      return drawInfantry(color, faction, def.sprite);
+    case 'harpooner':
+      return drawInfantry(color, faction, 'harpoon');
+    case 'snowballer':
+      return drawInfantry(color, faction, 'snowball');
+    case 'camoScout':
+      return drawInfantry(color, faction, 'camo');
+    case 'dartTeam':
+      return drawInfantry(color, faction, 'dart');
+    // Neue Fahrzeuge
+    case 'skyBike':
+      return drawBike(color, faction, false);
+    case 'snowmobile':
+      return drawBike(color, faction, true);
+    case 'buggy':
+      return drawBuggy(color, faction);
+    case 'robot':
+      return drawRobot(color, faction);
+    case 'wrecker':
+      return drawVehicle(color, faction, 'wrecker');
+    case 'snowTank':
+      return drawVehicle(color, faction, 'snowTank');
+    case 'lianaTank':
+      return drawVehicle(color, faction, 'liana');
+    case 'catapult':
+      return drawVehicle(color, faction, 'catapult');
+    case 'arcCannon':
+      return drawVehicle(color, faction, 'artillery');
+    // Neue Flieger
+    case 'dragonfly':
+    case 'iceCopter':
+    case 'gyrocopter':
+      return drawHeli(color, faction, false);
+    case 'drone':
+      return drawDrone(color, faction);
+    case 'paraPlane':
+      return drawPlane(color, faction, 'para');
+    case 'glider':
+      return drawPlane(color, faction, 'glider');
+    // Neue Schiffe
+    case 'voltBoat':
+      return drawBoat(color, faction, 'volt');
+    case 'frigate':
+      return drawBoat(color, faction, 'frigate');
+    case 'icebreaker':
+      return drawBoat(color, faction, 'icebreaker');
+    case 'raft':
+      return drawBoat(color, faction, 'raft');
     default:
       return drawVehicle(color, faction, 'tank');
   }
@@ -764,7 +1298,7 @@ function drawBuilding(def: BuildingDef, color: number, faction: Faction): HTMLCa
   const f = TRIM[faction];
   const main = rgb(color);
   const roofDark = rgb(color, 0.7);
-  const aero = faction === 'aero';
+  const aero = sleek(faction);
   const corner = aero ? 14 : 3;
 
   // Fundament (Betonplatte)
@@ -1196,6 +1730,25 @@ function drawBuilding(def: BuildingDef, color: number, faction: Faction): HTMLCa
       fillStroke(ctx, main, 2.5);
       break;
     }
+    case 'treehouse': {
+      // Baumhaus: Stamm und Holzplattform (das Blätterdach ist das drehbare Oberteil)
+      circle(ctx, W / 2, H / 2, W * 0.42);
+      fillStroke(ctx, '#a8713f', 3);
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 1.5;
+      for (let k = -2; k <= 2; k++) {
+        ctx.beginPath();
+        ctx.moveTo(W / 2 + k * 8, H / 2 - W * 0.38);
+        ctx.lineTo(W / 2 + k * 8, H / 2 + W * 0.38);
+        ctx.stroke();
+      }
+      circle(ctx, W / 2, H / 2, W * 0.22);
+      fillStroke(ctx, main, 2.5);
+      break;
+    }
+    case 'teslaCoil':
+    case 'frostTower':
+    case 'lookoutTower':
     case 'mgTower':
     case 'cannonTower': {
       circle(ctx, W / 2, H / 2, W * 0.42);
@@ -1406,6 +1959,21 @@ function drawProjectile(kind: string): HTMLCanvasElement {
       circle(ctx, 12, 6, 3);
       fillStroke(ctx, '#fff6a8', 1.2);
       break;
+    case 'arc':
+      // Blitz: gezackter Lichtbogen mit Leuchten
+      ctx.strokeStyle = 'rgba(200,160,255,0.6)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, 6);
+      ctx.lineTo(6, 2);
+      ctx.lineTo(11, 9);
+      ctx.lineTo(17, 3);
+      ctx.lineTo(24, 6);
+      ctx.stroke();
+      ctx.strokeStyle = '#fffbd0';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      break;
     default:
       ctx.strokeStyle = '#fff3a0';
       ctx.lineWidth = 2.5;
@@ -1431,7 +1999,7 @@ export function createCommonTextures(scene: Phaser.Scene): void {
   add('fx_rotor', drawRotor());
   add('fx_dirt', drawDirt());
   add('fx_shadow', drawSoftShadow());
-  for (const k of ['bullet', 'rocket', 'cannon', 'shell', 'flak', 'bomb']) add(`proj_${k}`, drawProjectile(k));
+  for (const k of ['bullet', 'rocket', 'cannon', 'shell', 'flak', 'bomb', 'arc']) add(`proj_${k}`, drawProjectile(k));
 }
 
 /** Weicher Schatten für Flieger. */

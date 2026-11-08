@@ -1781,3 +1781,17 @@ table.rating td:nth-child(2) {
   overflow-wrap: break-word;
   padding-right: 6px;
 }
+/* Team-Auswahl: 6 Teams mit Wappen */
+.faction-cards {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.faction-card img.emblem {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+
+.faction-card {
+  grid-template-columns: 56px 1fr;
+}

@@ -19,7 +19,7 @@ import { applyI18n, getLang, onLangChange, setLang, t, type Lang } from '../i18n
 import { PLAYER_COLORS, iconFor } from '../game/textures';
 import { NetSession } from '../net/NetSession';
 import { getItem, getSettings, loadProgress, saveLastDifficulty, saveSettings, setItem, type CampaignProgress } from '../storage';
-import { portrait } from './portraits';
+import { emblem, portrait } from './portraits';
 import { armorIcon, ratingTable } from './armorIcons';
 import { play, setVolumes } from '../audio/sound';
 
@@ -40,6 +40,8 @@ export interface GameConfig {
 }
 
 const NAME_KEY = 'fftr.name';
+/** Teams mit eigener Kampagne. */
+const CAMPAIGN_FACTIONS = ['aero', 'granite'] as const;
 
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -221,7 +223,7 @@ export class Menu {
       this.progress = p;
       if (this.screen === 'campaign') this.render();
     });
-    const column = (f: Faction) => {
+    const column = (f: 'aero' | 'granite') => {
       const missions = getMissions().filter((m) => m.faction === f);
       const cards = missions
         .map((m) => {
@@ -244,7 +246,7 @@ export class Menu {
       <div class="menu-card wide">
         <h2 data-i18n="campaign.title"></h2>
         <p class="muted" data-i18n="campaign.intro"></p>
-        <div class="campaign-cols">${FACTIONS.map(column).join('')}</div>
+        <div class="campaign-cols">${CAMPAIGN_FACTIONS.map(column).join('')}</div>
         <div class="menu-actions"><button type="button" data-go="main" data-i18n="menu.back"></button></div>
       </div>`;
     this.root.querySelectorAll<HTMLButtonElement>('[data-mission]').forEach((b) =>
@@ -267,7 +269,7 @@ export class Menu {
       <div class="menu-card wide briefing ${m.faction}">
         <h2><span class="mission-no">${m.id.toUpperCase()}</span> ${esc(t(m.titleKey))}</h2>
         <div class="briefing-body">
-          <figure><img src="${portrait(m.faction)}" alt="" /><figcaption>${t(`commander.${m.faction}`)}</figcaption></figure>
+          <figure><img src="${portrait(m.faction === 'granite' ? 'granite' : 'aero')}" alt="" /><figcaption>${t(`commander.${m.faction}`)}</figcaption></figure>
           <div class="briefing-text">
             ${paragraphs}
             <h3 data-i18n="campaign.goals"></h3>
@@ -313,9 +315,8 @@ export class Menu {
     const rules = getRules();
     const me = cfg.slots[0];
     const factionCard = (f: Faction) => {
-      const tank = rules.unit(f, 'lightTank')!;
       return `<button type="button" class="faction-card ${me.faction === f ? 'active' : ''}" data-faction="${f}">
-        <img src="${iconFor(tank, PLAYER_COLORS[me.color])}" alt="" />
+        <img class="emblem" src="${emblem(f)}" alt="" />
         <b data-i18n="faction.${f}"></b><small data-i18n="faction.${f}.desc"></small></button>`;
     };
     const slotRow = (s: SlotSetup, i: number) => `

@@ -47,6 +47,8 @@ import {
   ensureUnitTexture,
   iconFor,
   NEUTRAL_COLOR,
+  HELI_SPRITES,
+  BLIMP_SPRITES,
 } from './textures';
 
 const MIN_ZOOM = 0.45;
@@ -64,6 +66,7 @@ const SHOT_SOUND: Record<string, Sfx> = {
   rocket: 'rocket',
   flak: 'flak',
   bomb: 'bomb',
+  arc: 'zap',
 };
 
 const DEPTH = {
@@ -386,10 +389,10 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     // Flieger: Schatten am Boden, Helikopter mit Rotor
     const r = unitsToPx(u.def.radiusUnits);
     const shadow = air ? this.add.image(x, y, 'fx_shadow').setDisplaySize(r * 3, r * 2.2).setDepth(DEPTH.vehicle + 2) : null;
-    const rotor = u.def.sprite === 'gunship' || u.def.sprite === 'transportHeli' ? this.add.image(x, y, 'fx_rotor').setScale(TEX_SCALE).setDepth(depth + 2) : null;
+    const rotor = HELI_SPRITES.has(u.def.sprite) ? this.add.image(x, y, 'fx_rotor').setScale(TEX_SCALE).setDepth(depth + 2) : null;
     const dirt = u.def.burrows ? this.add.image(x, y, 'fx_dirt').setScale(TEX_SCALE).setDepth(DEPTH.crystal + 1).setVisible(false) : null;
     // Jetpack-Infanterie fliegt nur knapp über dem Boden
-    const alt = air ? (u.def.sprite === 'radarZeppelin' || u.def.sprite === 'bomberAirship' ? 22 : 16) : u.def.moveClassId === MoveClass.Air ? 6 : 0;
+    const alt = air ? (BLIMP_SPRITES.has(u.def.sprite) ? 22 : 16) : u.def.moveClassId === MoveClass.Air ? 6 : 0;
     const angle = Math.atan2(u.dirY, u.dirX);
     return { body, turret, shadow, rotor, dirt, alt, angle, turretAngle: angle, x, y, visible: true };
   }
@@ -488,6 +491,11 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       v.turret?.setVisible(visible);
       v.shadow?.setVisible(visible).setPosition(groundX + 4, groundY + 4);
       v.rotor?.setVisible(visible);
+      if (u.def.camouflage) {
+        // Getarnt: für den Besitzer halb durchsichtig (Gegner sehen die Einheit gar nicht)
+        v.body.setAlpha(u.burrowed ? 0.45 : 1);
+        v.turret?.setAlpha(u.burrowed ? 0.45 : 1);
+      }
       if (v.dirt) {
         // Eingegraben: nur ein Erdhügel (für den Besitzer halb durchsichtig sichtbar)
         v.dirt.setVisible(visible && u.burrowed).setPosition(groundX, groundY);
@@ -699,12 +707,19 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           if (e.owner === me) this.hud.message(t('msg.captured'), 'good', true);
           else if (e.previousOwner === me) this.hud.message(t('msg.lostBuilding'), 'warn', true);
           break;
+        case 'unloaded': {
+          // Aus der Luft abgesetzt (Fallschirm-Flieger, Transporthubschrauber): Fallschirme
+          const carrier = this.sim.getUnit(e.carrierId);
+          if (carrier?.def.airborne && this.visibleAt(e.x, e.y)) this.fxParachuteDrop(unitsToPx(e.x), unitsToPx(e.y));
+          break;
+        }
         case 'cannotUnload':
           if (e.owner === me) this.hud.message(t('msg.cannotUnload'), 'warn', true);
           break;
         case 'radio': {
           // Funkspruch: eigene Kommandantin, Gegnerin oder die Forscherin
-          const own = this.sim.players[me]?.faction ?? 'aero';
+          // Funksprüche gibt es nur in der Kampagne (Aero-Liga und Granit-Union)
+          const own = this.sim.players[me]?.faction === 'granite' ? 'granite' : 'aero';
           const kind: PortraitKind = e.speaker === 'researcher' ? 'researcher' : e.speaker === 'enemy' ? (own === 'aero' ? 'granite' : 'aero') : own;
           play('radio', 0.7);
           this.hud.radio(t(e.key), portrait(kind, e.speaker === 'enemy' ? 'angry' : 'normal'), t(kind === 'researcher' ? 'commander.researcher' : `commander.${kind}`));
@@ -849,6 +864,16 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     this.tweens.add({ targets: flash, scale: flash.scale * 1.5, alpha: 0, duration: big ? 140 : 90, onComplete: () => flash.destroy() });
   }
 
+  /** Fallschirmjäger landen: mehrere kleine Schirme schweben herab. */
+  private fxParachuteDrop(x: number, y: number): void {
+    for (let i = 0; i < 4; i++) {
+      const ox = (i - 1.5) * 14;
+      const chute = this.add.image(x + ox, y - 50, 'fx_parachute').setDepth(DEPTH.effect + 1).setScale(0.3);
+      this.tweens.add({ targets: chute, y: y + (i % 2) * 6, alpha: 0, duration: 1300 + i * 120, ease: 'Sine.easeIn', onComplete: () => chute.destroy() });
+    }
+    play('puff', 0.6);
+  }
+
   /** «Puff!» – Infanterie verschwindet in einer Wolke und schwebt am Fallschirm davon. */
   private fxInfantryOut(x: number, y: number): void {
     const puff = this.add.image(x, y, 'fx_puff').setDepth(DEPTH.effect).setScale(0.2);
@@ -891,7 +916,12 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
   private fxImpact(x: number, y: number, weaponId: string, splash: number): void {
     const w = this.rules.weapons.get(weaponId);
     const kind = w?.projectile ?? 'bullet';
-    if (kind === 'bullet' || kind === 'flak') {
+    if (kind === 'arc') {
+      // Blitz-Einschlag: kurzer violetter Funke
+      const s = this.add.image(x, y, 'fx_star').setDepth(DEPTH.effect).setTint(0xd8b8ff).setScale(0.5);
+      this.tweens.add({ targets: s, scale: 0.9, alpha: 0, duration: 200, onComplete: () => s.destroy() });
+      if (splash > 0) this.fxBoom(x, y, 0.5);
+    } else if (kind === 'bullet' || kind === 'flak') {
       const s = this.add.image(x, y, kind === 'flak' ? 'fx_puff' : 'fx_star').setDepth(DEPTH.effect).setScale(kind === 'flak' ? 0.12 : 0.35);
       this.tweens.add({ targets: s, scale: s.scale * 1.8, alpha: 0, duration: 250, onComplete: () => s.destroy() });
     } else {
