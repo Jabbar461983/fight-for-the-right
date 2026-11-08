@@ -198,6 +198,7 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     this.pingArmed = false;
     this.pings = [];
     this.mission = null;
+    this.fxAlive = 0;
     this.missionEndKey = undefined;
     this.lastCountdown = -1;
   }
@@ -494,6 +495,18 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
       v.angle = turnTowards(v.angle, target, TURN_SPEED * dt);
       v.body.setPosition(v.x, v.y).setRotation(v.angle);
       v.rotor?.setPosition(v.x, v.y).setRotation(this.time.now / 40);
+      // Fahrende Bodenfahrzeuge wirbeln etwas Staub auf
+      if (
+        u.def.category === 'vehicle' &&
+        !u.def.airborne &&
+        (u.x !== u.prevX || u.y !== u.prevY) &&
+        Math.random() < dt * 4 &&
+        !getSettings().lowFx &&
+        this.cameras.main.worldView.contains(v.x, v.y)
+      ) {
+        const back = unitsToPx(u.def.radiusUnits);
+        this.fxDust(v.x - Math.cos(v.angle) * back, v.y - Math.sin(v.angle) * back);
+      }
       if (v.turret) {
         const aiming = u.targetId !== 0 || u.task?.kind === 'attack';
         const tAngle = aiming ? Math.atan2(u.aimY, u.aimX) : v.angle;
@@ -524,8 +537,15 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
           v.body.destroy();
           v.top?.destroy();
         }
+        const isNew = !v;
         v = this.createBuildingView(b.def, b.owner, b.tx, b.ty);
         this.bviews.set(b.id, v);
+        // Neu gebaut (nicht beim Spielstart): kurz «aufbauen» lassen
+        if (isNew && this.frame > 5 && !b.def.neutral) this.fxConstruct(v, b);
+      }
+      // Beschädigt: Rauch steigt auf
+      if (b.hp < b.def.hp / 2 && !b.def.wall && v.visible && Math.random() < dt * (getSettings().lowFx ? 0.6 : 1.8)) {
+        this.fxSmoke((b.tx + Math.random() * b.def.width) * TILE_PX, (b.ty + Math.random() * b.def.height * 0.6) * TILE_PX, b.hp < b.def.hp / 4);
       }
       const visible = this.sim.isAlly(this.local, b.owner) || this.sim.canSee(this.local, b) || p.ghosts.has(b.id);
       v.visible = visible;
@@ -734,6 +754,70 @@ export class GameScene extends Phaser.Scene implements InputTarget, HudActions {
     if (d > 1.3 && !always) return;
     const vol = d <= 1 ? 1 - d * 0.35 : always ? 0.25 : 0.3;
     play(name, vol, Math.max(-0.8, Math.min(0.8, dx * 0.6)));
+  }
+
+  /** Wie viele kleine Effekte (Rauch, Staub) gerade leben – begrenzt für schwache Geräte. */
+  private fxAlive = 0;
+
+  /** Bau-Animation: Gebäude «wächst» aus einer Staubwolke. */
+  private fxConstruct(v: BuildingView, b: Building): void {
+    const y = v.body.y;
+    v.body.setAlpha(0.3).setY(y + 10);
+    this.tweens.add({ targets: v.body, alpha: 1, y, duration: 450, ease: 'Back.easeOut' });
+    if (v.top) {
+      v.top.setAlpha(0);
+      this.tweens.add({ targets: v.top, alpha: 1, duration: 300, delay: 350 });
+    }
+    if (!this.visibleAt(b.x, b.y)) return;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const r = (Math.max(b.def.width, b.def.height) * TILE_PX) / 2;
+      const cx = unitsToPx(b.x);
+      const cy = unitsToPx(b.y);
+      const d = this.add.image(cx + Math.cos(a) * r * 0.6, cy + Math.sin(a) * r * 0.6, 'fx_puff').setDepth(DEPTH.effect).setTint(0xd8c9a3).setScale(0.15).setAlpha(0.8);
+      this.tweens.add({ targets: d, x: cx + Math.cos(a) * r * 1.2, y: cy + Math.sin(a) * r * 1.2, scale: 0.35, alpha: 0, duration: 600, onComplete: () => d.destroy() });
+    }
+  }
+
+  /** Rauchwolke, die aufsteigt (beschädigte Gebäude). */
+  private fxSmoke(x: number, y: number, dark: boolean): void {
+    if (this.fxAlive > 60) return;
+    this.fxAlive++;
+    const s = this.add
+      .image(x, y, 'fx_puff')
+      .setDepth(DEPTH.effect - 1)
+      .setTint(dark ? 0x3a3a46 : 0x8a8a96)
+      .setScale(0.12)
+      .setAlpha(0.7);
+    this.tweens.add({
+      targets: s,
+      y: y - 34,
+      x: x + 8,
+      scale: 0.32,
+      alpha: 0,
+      duration: 1400,
+      onComplete: () => {
+        s.destroy();
+        this.fxAlive--;
+      },
+    });
+  }
+
+  /** Staubwölkchen hinter fahrenden Fahrzeugen. */
+  private fxDust(x: number, y: number): void {
+    if (this.fxAlive > 50) return;
+    this.fxAlive++;
+    const d = this.add.image(x, y, 'fx_puff').setDepth(DEPTH.crystal + 1).setTint(0xcbb98a).setScale(0.08).setAlpha(0.55);
+    this.tweens.add({
+      targets: d,
+      scale: 0.2,
+      alpha: 0,
+      duration: 650,
+      onComplete: () => {
+        d.destroy();
+        this.fxAlive--;
+      },
+    });
   }
 
   /** Mündungsfeuer am Schützen (Einheit oder Turm). */
