@@ -174,7 +174,11 @@ npm run maps         # Startkarten neu erzeugen
   KI: zweite Raffinerie, Mindestarmee, Wellen drücken weiter). KI-Serie 8.11.2026 (nach Sammler-Fix, 3 Karten):
   Schwer gegen Leicht 7 Siege, 5 Unentschieden, 0 Niederlagen; Mittel Aero gegen Mittel Granit 2:3 (1 unentschieden).
   Sammler: jeder steuert eine eigene Kachel an (`claimed`), volle Kacheln zuerst, nur über Land erreichbare.
-  Bauleiste/Auswahl zeigen «stark gegen» (`strongAgainst()` in rules.ts, ab 80 % Schaden). Meldungen mit Fraktions-Wappen. Auf echtem Tablet noch nicht gemessen.
+  Wirksamkeit: `effectiveness()` in rules.ts = 0–5 Sterne je Ziel-Art (aus Waffen-Prozent: ab 100 % 5, ab 80 % 4,
+  ab 50 % 3, ab 25 % 2, sonst 1, 0 = trifft nicht). Anzeige mit eigenen SVG-Symbolen (`ui/armorIcons.ts`): Bauleiste
+  (Symbole der Stärken + «i»-Knopf mit Sterne-Tafel), Auswahl (Tabelle), Anleitung. Meldungen mit Fraktions-Wappen.
+  «Wir werden angegriffen» wird gesprochen (`speak()` in sound.ts, Web Speech API) und verschwindet nach 3 s.
+  Schrift: überall Arial. Auf echtem Tablet noch nicht gemessen.
 - **Etappe 5 – Kampagne:** abgenommen (7.11.2026). A1 «Landung auf Neu-Aurora» (Tutorial auf Kristalltal),
   A2 «Rettung im Nebel» (Kommando, eigene Karte Nebelwald), G1 «Die Mauer hält» (15 Min. verteidigen auf
   Vier Winde), G2 «Gegenschlag» (Archipel gegen KI-Basis). Figuren: Kommandantin Lyra Funke (Aero),
