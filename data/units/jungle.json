@@ -1,0 +1,127 @@
+{
+  "units": [
+    {
+      "id": "camoScout",
+      "nameKey": "unit.camoScout",
+      "faction": "jungle",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "weapon": "rifle",
+      "speed": 2,
+      "radius": 0.24,
+      "sight": 7,
+      "hp": 90,
+      "cost": 180,
+      "buildTime": 5,
+      "prerequisites": [
+        "barracks"
+      ],
+      "camouflage": true,
+      "sprite": "camoScout"
+    },
+    {
+      "id": "dartTeam",
+      "nameKey": "unit.dartTeam",
+      "faction": "jungle",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "weapon": "dartLauncher",
+      "speed": 1.5,
+      "radius": 0.24,
+      "sight": 5,
+      "hp": 95,
+      "cost": 300,
+      "buildTime": 5,
+      "prerequisites": [
+        "barracks",
+        "radar"
+      ],
+      "camouflage": true,
+      "sprite": "dartTeam"
+    },
+    {
+      "id": "lianaTank",
+      "nameKey": "unit.lianaTank",
+      "faction": "jungle",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "lightCannon",
+      "speed": 2.3,
+      "radius": 0.42,
+      "sight": 6,
+      "hp": 420,
+      "cost": 850,
+      "buildTime": 11,
+      "prerequisites": [
+        "factory",
+        "techCenter"
+      ],
+      "camouflage": true,
+      "sprite": "lianaTank",
+      "turret": true
+    },
+    {
+      "id": "catapult",
+      "nameKey": "unit.catapult",
+      "faction": "jungle",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "coconut",
+      "speed": 1.5,
+      "radius": 0.42,
+      "sight": 7,
+      "hp": 220,
+      "cost": 850,
+      "buildTime": 11,
+      "prerequisites": [
+        "factory",
+        "radar"
+      ],
+      "sprite": "catapult"
+    },
+    {
+      "id": "gyrocopter",
+      "nameKey": "unit.gyrocopter",
+      "faction": "jungle",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "weapon": "dragonflyGun",
+      "speed": 5,
+      "radius": 0.38,
+      "sight": 7,
+      "hp": 200,
+      "cost": 650,
+      "buildTime": 9,
+      "prerequisites": [
+        "airfield"
+      ],
+      "sprite": "gyrocopter"
+    },
+    {
+      "id": "raftGunboat",
+      "nameKey": "unit.raftGunboat",
+      "faction": "jungle",
+      "category": "naval",
+      "moveClass": "naval",
+      "armor": "light",
+      "weapon": "patrolGun",
+      "speed": 2.8,
+      "radius": 0.55,
+      "sight": 6,
+      "hp": 380,
+      "cost": 650,
+      "buildTime": 9,
+      "prerequisites": [
+        "shipyard"
+      ],
+      "camouflage": true,
+      "sprite": "raft"
+    }
+  ]
+}

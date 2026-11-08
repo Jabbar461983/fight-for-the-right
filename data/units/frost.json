@@ -1,0 +1,126 @@
+{
+  "units": [
+    {
+      "id": "snowballer",
+      "nameKey": "unit.snowballer",
+      "faction": "frost",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "weapon": "snowball",
+      "speed": 1.4,
+      "radius": 0.24,
+      "sight": 5,
+      "hp": 100,
+      "cost": 260,
+      "buildTime": 5,
+      "prerequisites": [
+        "barracks"
+      ],
+      "sprite": "snowballer"
+    },
+    {
+      "id": "snowmobile",
+      "nameKey": "unit.snowmobile",
+      "faction": "frost",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "bikeGun",
+      "speed": 3.6,
+      "radius": 0.32,
+      "sight": 6,
+      "hp": 160,
+      "cost": 380,
+      "buildTime": 5,
+      "prerequisites": [
+        "factory"
+      ],
+      "sprite": "snowmobile"
+    },
+    {
+      "id": "frostCannon",
+      "nameKey": "unit.frostCannon",
+      "faction": "frost",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "frostBeam",
+      "speed": 1.8,
+      "radius": 0.42,
+      "sight": 6,
+      "hp": 300,
+      "cost": 950,
+      "buildTime": 13,
+      "prerequisites": [
+        "factory",
+        "radar"
+      ],
+      "sprite": "frostCannon",
+      "turret": true
+    },
+    {
+      "id": "snowTank",
+      "nameKey": "unit.snowTank",
+      "faction": "frost",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "heavy",
+      "weapon": "twinCannon",
+      "speed": 1.3,
+      "radius": 0.55,
+      "sight": 6,
+      "hp": 900,
+      "cost": 1600,
+      "buildTime": 21,
+      "prerequisites": [
+        "factory",
+        "techCenter"
+      ],
+      "sprite": "snowTank",
+      "turret": true
+    },
+    {
+      "id": "iceCopter",
+      "nameKey": "unit.iceCopter",
+      "faction": "frost",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "weapon": "gunshipRockets",
+      "speed": 3.8,
+      "radius": 0.45,
+      "sight": 7,
+      "hp": 320,
+      "cost": 1200,
+      "buildTime": 16,
+      "prerequisites": [
+        "airfield",
+        "techCenter"
+      ],
+      "sprite": "iceCopter"
+    },
+    {
+      "id": "icebreaker",
+      "nameKey": "unit.icebreaker",
+      "faction": "frost",
+      "category": "naval",
+      "moveClass": "naval",
+      "armor": "heavy",
+      "weapon": "cruiserCannon",
+      "speed": 1.8,
+      "radius": 0.7,
+      "sight": 7,
+      "hp": 1200,
+      "cost": 1800,
+      "buildTime": 24,
+      "prerequisites": [
+        "shipyard",
+        "techCenter"
+      ],
+      "sprite": "icebreaker",
+      "turret": true
+    }
+  ]
+}

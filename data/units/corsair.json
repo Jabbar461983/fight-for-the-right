@@ -1,0 +1,130 @@
+{
+  "units": [
+    {
+      "id": "boarder",
+      "nameKey": "unit.boarder",
+      "faction": "corsair",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "weapon": "cutlassGun",
+      "speed": 1.9,
+      "radius": 0.24,
+      "sight": 5,
+      "hp": 120,
+      "cost": 250,
+      "buildTime": 5,
+      "prerequisites": [
+        "barracks"
+      ],
+      "sprite": "boarder"
+    },
+    {
+      "id": "harpooner",
+      "nameKey": "unit.harpooner",
+      "faction": "corsair",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "weapon": "harpoon",
+      "speed": 1.5,
+      "radius": 0.24,
+      "sight": 5,
+      "hp": 100,
+      "cost": 320,
+      "buildTime": 5,
+      "prerequisites": [
+        "barracks",
+        "radar"
+      ],
+      "sprite": "harpooner"
+    },
+    {
+      "id": "cannonBuggy",
+      "nameKey": "unit.cannonBuggy",
+      "faction": "corsair",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "buggyCannon",
+      "speed": 3.8,
+      "radius": 0.36,
+      "sight": 6,
+      "hp": 260,
+      "cost": 500,
+      "buildTime": 7,
+      "prerequisites": [
+        "factory"
+      ],
+      "sprite": "buggy"
+    },
+    {
+      "id": "privateer",
+      "nameKey": "unit.privateer",
+      "faction": "corsair",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "weapon": "broadside",
+      "speed": 1.8,
+      "radius": 0.8,
+      "sight": 7,
+      "hp": 900,
+      "cost": 1600,
+      "buildTime": 21,
+      "prerequisites": [
+        "airfield",
+        "techCenter"
+      ],
+      "transport": {
+        "capacity": 4,
+        "accepts": [
+          "infantry"
+        ]
+      },
+      "sprite": "privateer"
+    },
+    {
+      "id": "glider",
+      "nameKey": "unit.glider",
+      "faction": "corsair",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "weapon": "jetMissiles",
+      "speed": 6.5,
+      "radius": 0.4,
+      "sight": 7,
+      "hp": 150,
+      "cost": 1100,
+      "buildTime": 15,
+      "prerequisites": [
+        "airfield"
+      ],
+      "ammo": 2,
+      "sprite": "glider"
+    },
+    {
+      "id": "frigate",
+      "nameKey": "unit.frigate",
+      "faction": "corsair",
+      "category": "naval",
+      "moveClass": "naval",
+      "armor": "heavy",
+      "weapon": "broadside",
+      "speed": 2.2,
+      "radius": 0.7,
+      "sight": 7,
+      "hp": 900,
+      "cost": 1500,
+      "buildTime": 20,
+      "prerequisites": [
+        "shipyard",
+        "techCenter"
+      ],
+      "sprite": "frigate"
+    }
+  ]
+}

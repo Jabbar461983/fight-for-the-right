@@ -13,7 +13,10 @@
       "buildable": false,
       "sight": 6,
       "storage": 500,
-      "produces": ["building", "defense"],
+      "produces": [
+        "building",
+        "defense"
+      ],
       "constructionYard": true,
       "sprite": "constructionYard"
     },
@@ -27,7 +30,9 @@
       "cost": 300,
       "power": 100,
       "buildTime": 8,
-      "prerequisites": ["constructionYard"],
+      "prerequisites": [
+        "constructionYard"
+      ],
       "sight": 4,
       "sprite": "powerPlant"
     },
@@ -41,7 +46,9 @@
       "cost": 1600,
       "power": -30,
       "buildTime": 18,
-      "prerequisites": ["powerPlant"],
+      "prerequisites": [
+        "powerPlant"
+      ],
       "sight": 5,
       "storage": 3000,
       "refinery": true,
@@ -58,7 +65,9 @@
       "cost": 150,
       "power": -10,
       "buildTime": 5,
-      "prerequisites": ["refinery"],
+      "prerequisites": [
+        "refinery"
+      ],
       "sight": 3,
       "storage": 2000,
       "sprite": "silo"
@@ -73,9 +82,13 @@
       "cost": 400,
       "power": -20,
       "buildTime": 10,
-      "prerequisites": ["powerPlant"],
+      "prerequisites": [
+        "powerPlant"
+      ],
       "sight": 4,
-      "produces": ["infantry"],
+      "produces": [
+        "infantry"
+      ],
       "sprite": "barracks"
     },
     {
@@ -88,9 +101,13 @@
       "cost": 2000,
       "power": -30,
       "buildTime": 22,
-      "prerequisites": ["refinery"],
+      "prerequisites": [
+        "refinery"
+      ],
       "sight": 4,
-      "produces": ["vehicle"],
+      "produces": [
+        "vehicle"
+      ],
       "sprite": "factory"
     },
     {
@@ -103,7 +120,9 @@
       "cost": 1000,
       "power": -40,
       "buildTime": 15,
-      "prerequisites": ["refinery"],
+      "prerequisites": [
+        "refinery"
+      ],
       "sight": 9,
       "radar": true,
       "sprite": "radar"
@@ -118,7 +137,9 @@
       "cost": 40,
       "power": 0,
       "buildTime": 1.5,
-      "prerequisites": ["constructionYard"],
+      "prerequisites": [
+        "constructionYard"
+      ],
       "sight": 1,
       "wall": true,
       "sprite": "wall"
@@ -133,7 +154,9 @@
       "cost": 400,
       "power": -10,
       "buildTime": 9,
-      "prerequisites": ["barracks"],
+      "prerequisites": [
+        "barracks"
+      ],
       "sight": 6,
       "weapon": "mgTurret",
       "sprite": "mgTower"
@@ -148,7 +171,9 @@
       "cost": 650,
       "power": -20,
       "buildTime": 12,
-      "prerequisites": ["factory"],
+      "prerequisites": [
+        "factory"
+      ],
       "sight": 7,
       "weapon": "cannonTurret",
       "sprite": "cannonTower"
@@ -163,9 +188,13 @@
       "cost": 1500,
       "power": -40,
       "buildTime": 18,
-      "prerequisites": ["radar"],
+      "prerequisites": [
+        "radar"
+      ],
       "sight": 5,
-      "produces": ["air"],
+      "produces": [
+        "air"
+      ],
       "airfield": true,
       "sprite": "airfield"
     },
@@ -179,9 +208,13 @@
       "cost": 1400,
       "power": -30,
       "buildTime": 18,
-      "prerequisites": ["radar"],
+      "prerequisites": [
+        "radar"
+      ],
       "sight": 5,
-      "produces": ["naval"],
+      "produces": [
+        "naval"
+      ],
       "requiresWater": true,
       "sprite": "shipyard"
     },
@@ -195,7 +228,9 @@
       "cost": 900,
       "power": -30,
       "buildTime": 12,
-      "prerequisites": ["factory"],
+      "prerequisites": [
+        "factory"
+      ],
       "sight": 4,
       "repairsVehicles": true,
       "sprite": "repairStation"
@@ -210,7 +245,9 @@
       "cost": 2000,
       "power": -80,
       "buildTime": 25,
-      "prerequisites": ["radar"],
+      "prerequisites": [
+        "radar"
+      ],
       "sight": 5,
       "sprite": "techCenter"
     },
@@ -224,7 +261,9 @@
       "cost": 600,
       "power": -20,
       "buildTime": 10,
-      "prerequisites": ["radar"],
+      "prerequisites": [
+        "radar"
+      ],
       "sight": 8,
       "weapon": "flakCannon",
       "sprite": "flakPosition"
@@ -240,7 +279,9 @@
       "cost": 1500,
       "power": -60,
       "buildTime": 18,
-      "prerequisites": ["techCenter"],
+      "prerequisites": [
+        "techCenter"
+      ],
       "sight": 9,
       "weapon": "rocketBattery",
       "sprite": "rocketBattery"
@@ -256,10 +297,86 @@
       "cost": 1200,
       "power": -10,
       "buildTime": 16,
-      "prerequisites": ["techCenter", "barracks"],
+      "prerequisites": [
+        "techCenter",
+        "barracks"
+      ],
       "sight": 6,
       "garrison": 3,
       "sprite": "bunker"
+    },
+    {
+      "id": "treehouse",
+      "nameKey": "building.treehouse",
+      "faction": "jungle",
+      "category": "defense",
+      "width": 1,
+      "height": 1,
+      "hp": 500,
+      "cost": 700,
+      "power": -10,
+      "buildTime": 9,
+      "prerequisites": [
+        "barracks",
+        "radar"
+      ],
+      "sight": 10,
+      "weapon": "dartLauncher",
+      "sprite": "treehouse"
+    },
+    {
+      "id": "frostTower",
+      "nameKey": "building.frostTower",
+      "faction": "frost",
+      "category": "defense",
+      "width": 1,
+      "height": 1,
+      "hp": 900,
+      "cost": 1000,
+      "power": -25,
+      "buildTime": 13,
+      "prerequisites": [
+        "techCenter"
+      ],
+      "sight": 8,
+      "weapon": "frostBeam",
+      "sprite": "frostTower"
+    },
+    {
+      "id": "lookoutTower",
+      "nameKey": "building.lookoutTower",
+      "faction": "corsair",
+      "category": "defense",
+      "width": 1,
+      "height": 1,
+      "hp": 500,
+      "cost": 800,
+      "power": -15,
+      "buildTime": 11,
+      "prerequisites": [
+        "factory"
+      ],
+      "sight": 10,
+      "weapon": "lookoutCannon",
+      "sprite": "lookoutTower"
+    },
+    {
+      "id": "teslaCoil",
+      "nameKey": "building.teslaCoil",
+      "faction": "volt",
+      "category": "defense",
+      "width": 1,
+      "height": 1,
+      "hp": 600,
+      "cost": 1200,
+      "power": -40,
+      "buildTime": 16,
+      "prerequisites": [
+        "techCenter"
+      ],
+      "sight": 8,
+      "weapon": "coilArc",
+      "sprite": "teslaCoil"
     },
     {
       "id": "glimmerSource",

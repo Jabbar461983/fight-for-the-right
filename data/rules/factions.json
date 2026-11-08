@@ -3,14 +3,98 @@
     {
       "id": "aero",
       "nameKey": "faction.aero",
-      "palette": { "main": "#e8eef5", "second": "#5ab4ff", "metal": "#a9c4d6", "dark": "#2b4a66" },
-      "unitModifiers": { "cost": 0.95, "speed": 1.12, "hp": 0.9, "buildTime": 0.95 }
+      "palette": {
+        "main": "#e8eef5",
+        "second": "#5ab4ff",
+        "metal": "#a9c4d6",
+        "dark": "#2b4a66"
+      },
+      "unitModifiers": {
+        "cost": 0.92,
+        "speed": 1.12,
+        "hp": 1,
+        "buildTime": 0.95
+      }
     },
     {
       "id": "granite",
       "nameKey": "faction.granite",
-      "palette": { "main": "#c8a24a", "second": "#6b863e", "metal": "#c29a46", "dark": "#4a3b22" },
-      "unitModifiers": { "cost": 1.05, "speed": 0.9, "hp": 1.22, "buildTime": 1.0 }
+      "palette": {
+        "main": "#c8a24a",
+        "second": "#6b863e",
+        "metal": "#c29a46",
+        "dark": "#4a3b22"
+      },
+      "unitModifiers": {
+        "cost": 1.05,
+        "speed": 0.9,
+        "hp": 1.1,
+        "buildTime": 1
+      }
+    },
+    {
+      "id": "volt",
+      "nameKey": "faction.volt",
+      "palette": {
+        "main": "#ffe14d",
+        "second": "#9b5de5",
+        "metal": "#c9c2e0",
+        "dark": "#3b2a5c"
+      },
+      "unitModifiers": {
+        "cost": 1,
+        "speed": 1,
+        "hp": 0.95,
+        "buildTime": 0.85
+      }
+    },
+    {
+      "id": "corsair",
+      "nameKey": "faction.corsair",
+      "palette": {
+        "main": "#c0392b",
+        "second": "#8a5a35",
+        "metal": "#e8d29a",
+        "dark": "#4a2a1c"
+      },
+      "unitModifiers": {
+        "cost": 0.87,
+        "speed": 1.08,
+        "hp": 0.97,
+        "buildTime": 0.95
+      }
+    },
+    {
+      "id": "frost",
+      "nameKey": "faction.frost",
+      "palette": {
+        "main": "#e8f6ff",
+        "second": "#9fd8ff",
+        "metal": "#b9d4e6",
+        "dark": "#2a4a6a"
+      },
+      "unitModifiers": {
+        "cost": 1.05,
+        "speed": 0.92,
+        "hp": 1.1,
+        "buildTime": 1.05
+      }
+    },
+    {
+      "id": "jungle",
+      "nameKey": "faction.jungle",
+      "palette": {
+        "main": "#6b8f3a",
+        "second": "#8a5a35",
+        "metal": "#c9e07a",
+        "dark": "#2a3a1c"
+      },
+      "unitModifiers": {
+        "cost": 1,
+        "speed": 1.05,
+        "hp": 0.93,
+        "buildTime": 1
+      }
     }
   ]
 }

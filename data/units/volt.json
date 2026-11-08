@@ -1,0 +1,125 @@
+{
+  "units": [
+    {
+      "id": "sparkBot",
+      "nameKey": "unit.sparkBot",
+      "faction": "volt",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "light",
+      "weapon": "sparkGun",
+      "speed": 1.6,
+      "radius": 0.28,
+      "sight": 5,
+      "hp": 160,
+      "cost": 300,
+      "buildTime": 5,
+      "prerequisites": [
+        "barracks"
+      ],
+      "sprite": "sparkBot"
+    },
+    {
+      "id": "teslaTank",
+      "nameKey": "unit.teslaTank",
+      "faction": "volt",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "teslaArc",
+      "speed": 2.2,
+      "radius": 0.42,
+      "sight": 6,
+      "hp": 380,
+      "cost": 1000,
+      "buildTime": 13,
+      "prerequisites": [
+        "factory",
+        "techCenter"
+      ],
+      "sprite": "teslaTank",
+      "turret": true
+    },
+    {
+      "id": "swarmDrone",
+      "nameKey": "unit.swarmDrone",
+      "faction": "volt",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "weapon": "droneZap",
+      "speed": 6,
+      "radius": 0.28,
+      "sight": 6,
+      "hp": 90,
+      "cost": 300,
+      "buildTime": 5,
+      "prerequisites": [
+        "airfield"
+      ],
+      "sprite": "drone"
+    },
+    {
+      "id": "arcCannon",
+      "nameKey": "unit.arcCannon",
+      "faction": "volt",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "arcLance",
+      "speed": 1.6,
+      "radius": 0.42,
+      "sight": 7,
+      "hp": 260,
+      "cost": 1100,
+      "buildTime": 15,
+      "prerequisites": [
+        "factory",
+        "techCenter"
+      ],
+      "sprite": "arcCannon",
+      "turret": true
+    },
+    {
+      "id": "stormBlimp",
+      "nameKey": "unit.stormBlimp",
+      "faction": "volt",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "weapon": "stormBolt",
+      "speed": 1.5,
+      "radius": 0.8,
+      "sight": 7,
+      "hp": 800,
+      "cost": 1600,
+      "buildTime": 21,
+      "prerequisites": [
+        "airfield",
+        "techCenter"
+      ],
+      "sprite": "stormBlimp"
+    },
+    {
+      "id": "voltBoat",
+      "nameKey": "unit.voltBoat",
+      "faction": "volt",
+      "category": "naval",
+      "moveClass": "naval",
+      "armor": "light",
+      "weapon": "teslaArc",
+      "speed": 3.2,
+      "radius": 0.55,
+      "sight": 6,
+      "hp": 380,
+      "cost": 1000,
+      "buildTime": 13,
+      "prerequisites": [
+        "shipyard"
+      ],
+      "sprite": "voltBoat"
+    }
+  ]
+}

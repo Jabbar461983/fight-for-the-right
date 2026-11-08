@@ -14,7 +14,10 @@
       "hp": 120,
       "cost": 320,
       "buildTime": 9,
-      "prerequisites": ["barracks", "techCenter"],
+      "prerequisites": [
+        "barracks",
+        "techCenter"
+      ],
       "sprite": "jetpackRanger"
     },
     {
@@ -28,10 +31,13 @@
       "speed": 3.2,
       "radius": 0.42,
       "sight": 6,
-      "hp": 300,
+      "hp": 320,
       "cost": 750,
       "buildTime": 13,
-      "prerequisites": ["factory", "techCenter"],
+      "prerequisites": [
+        "factory",
+        "techCenter"
+      ],
       "sprite": "hoverTank",
       "turret": true
     },
@@ -51,7 +57,10 @@
       "hp": 180,
       "cost": 1300,
       "buildTime": 16,
-      "prerequisites": ["airfield", "techCenter"],
+      "prerequisites": [
+        "airfield",
+        "techCenter"
+      ],
       "sprite": "cometFighter"
     },
     {
@@ -68,7 +77,10 @@
       "hp": 500,
       "cost": 1000,
       "buildTime": 15,
-      "prerequisites": ["airfield", "techCenter"],
+      "prerequisites": [
+        "airfield",
+        "techCenter"
+      ],
       "sprite": "radarZeppelin"
     },
     {
@@ -85,8 +97,119 @@
       "hp": 320,
       "cost": 1100,
       "buildTime": 15,
-      "prerequisites": ["shipyard", "techCenter"],
+      "prerequisites": [
+        "shipyard",
+        "techCenter"
+      ],
       "sprite": "missileBoat"
+    },
+    {
+      "id": "skyBike",
+      "nameKey": "unit.skyBike",
+      "faction": "aero",
+      "category": "vehicle",
+      "moveClass": "vehicle",
+      "armor": "light",
+      "weapon": "bikeGun",
+      "speed": 4.2,
+      "radius": 0.3,
+      "sight": 6,
+      "hp": 170,
+      "cost": 300,
+      "buildTime": 5,
+      "prerequisites": [
+        "factory"
+      ],
+      "sprite": "skyBike"
+    },
+    {
+      "id": "paratrooper",
+      "nameKey": "unit.paratrooper",
+      "faction": "aero",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "weapon": "rifle",
+      "speed": 1.7,
+      "radius": 0.24,
+      "sight": 5,
+      "hp": 110,
+      "cost": 160,
+      "buildTime": 5,
+      "prerequisites": [
+        "airfield"
+      ],
+      "buildable": false,
+      "sprite": "paratrooper"
+    },
+    {
+      "id": "paraPlane",
+      "nameKey": "unit.paraPlane",
+      "faction": "aero",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "speed": 4.5,
+      "radius": 0.55,
+      "sight": 7,
+      "hp": 260,
+      "cost": 1300,
+      "buildTime": 17,
+      "prerequisites": [
+        "airfield"
+      ],
+      "transport": {
+        "capacity": 5,
+        "accepts": [
+          "infantry"
+        ]
+      },
+      "initialPassengers": {
+        "type": "paratrooper",
+        "count": 4
+      },
+      "sprite": "paraPlane"
+    },
+    {
+      "id": "dragonfly",
+      "nameKey": "unit.dragonfly",
+      "faction": "aero",
+      "category": "air",
+      "moveClass": "air",
+      "airborne": true,
+      "armor": "air",
+      "weapon": "dragonflyGun",
+      "speed": 5.5,
+      "radius": 0.35,
+      "sight": 7,
+      "hp": 160,
+      "cost": 700,
+      "buildTime": 9,
+      "prerequisites": [
+        "airfield"
+      ],
+      "sprite": "dragonfly"
+    },
+    {
+      "id": "sniper",
+      "nameKey": "unit.sniper",
+      "faction": "aero",
+      "category": "infantry",
+      "moveClass": "infantry",
+      "armor": "infantry",
+      "weapon": "sniperRifle",
+      "speed": 1.5,
+      "radius": 0.24,
+      "sight": 8,
+      "hp": 90,
+      "cost": 300,
+      "buildTime": 5,
+      "prerequisites": [
+        "barracks",
+        "radar"
+      ],
+      "sprite": "sniper"
     }
   ]
 }

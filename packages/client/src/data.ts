@@ -11,6 +11,10 @@ import ai from '@data/rules/ai.json';
 import commonUnits from '@data/units/common.json';
 import aeroUnits from '@data/units/aero.json';
 import graniteUnits from '@data/units/granite.json';
+import voltUnits from '@data/units/volt.json';
+import corsairUnits from '@data/units/corsair.json';
+import frostUnits from '@data/units/frost.json';
+import jungleUnits from '@data/units/jungle.json';
 import kristalltal from '@data/maps/kristalltal.json';
 import vierWinde from '@data/maps/vier-winde.json';
 import zweiUfer from '@data/maps/zwei-ufer.json';
@@ -24,7 +28,8 @@ import archipel from '@data/maps/archipel.json';
 let rulesCache: Rules | null = null;
 
 export function getRules(): Rules {
-  rulesCache ??= loadRules({ weapons, buildings, factions, ai, units: [commonUnits, aeroUnits, graniteUnits] });
+  rulesCache ??= loadRules({ weapons, buildings, factions, ai, units: [commonUnits, aeroUnits, graniteUnits, voltUnits, corsairUnits, frostUnits, jungleUnits],
+  });
   return rulesCache;
 }
 
